@@ -1,4 +1,5 @@
 // server.js
+const fs = require('fs');                    // [Render] nuevo
 const path = require('path');
 const express = require('express');
 const bcrypt = require('bcrypt');
@@ -7,26 +8,37 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 
 const app = express();
+
+// [Render] carpeta persistente para DB/sesiones (se crea sola)
+// Si definís DATA_DIR en Render y montás un Disk a ese path, los datos persisten entre deploys.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
 const PORT = process.env.PORT || 3000;
 
 // --- Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// [Render] atrás de un proxy (HTTPS), necesario si usás cookie "secure"
+app.set('trust proxy', 1);
+
 app.use(
   session({
-    store: new SQLiteStore({ db: 'sessions.sqlite', dir: './' }),
-    secret: 'cambia-este-secreto',
+    store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }), // [Render] dir -> DATA_DIR
+    secret: process.env.SESSION_SECRET || 'cambia-este-secreto',       // [Render] toma de env
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 1000 * 60 * 60 * 8, // 8 horas
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production', // [Render] true en prod (HTTPS), false local
     },
   })
 );
 
 // --- DB: SQLite
-const db = new Database(path.join(__dirname, 'db.sqlite'));
+const db = new Database(path.join(DATA_DIR, 'db.sqlite')); // [Render] DB en DATA_DIR
 db.pragma('journal_mode = wal');
 
 db.exec(`
@@ -55,10 +67,7 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
     }
 
-    const exists = db
-      .prepare('SELECT id FROM users WHERE username = ?')
-      .get(username);
-
+    const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
     if (exists) {
       return res.status(409).json({ ok: false, error: 'USUARIO_YA_EXISTE' });
     }
@@ -81,10 +90,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
     }
 
-    const user = db
-      .prepare('SELECT id, username, password_hash FROM users WHERE username = ?')
-      .get(username);
-
+    const user = db.prepare('SELECT id, username, password_hash FROM users WHERE username = ?').get(username);
     if (!user) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
 
     const ok = await bcrypt.compare(password, user.password_hash);
@@ -129,21 +135,18 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-// --- Páginas protegidas (pueden ser estáticas, validación en front)
+// --- Páginas (servidas por Express)
 app.get('/admin', (req, res) => {
   return res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
-
 app.get('/supervisor', (req, res) => {
   return res.sendFile(path.join(__dirname, 'public', 'supervisor.html'));
 });
-
-// --- Dashboard (protección en front)
 app.get('/dashboard', (req, res) => {
   return res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // --- Inicio
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {            // [Render] escucha en 0.0.0.0
+  console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
 });
