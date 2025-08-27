@@ -50,7 +50,7 @@ p#who{
 /* Tarjetas */
 .card{
   background: var(--card);
-  border: 2px solid var(--border);        /* +grosor para mayor visibilidad */
+  border: 2px solid var(--border);        
   border-radius: var(--radius);
   padding: clamp(16px, 4.5vw, 28px);
   margin: 16px auto 0;
@@ -59,7 +59,7 @@ p#who{
   box-shadow: var(--shadow);
 }
 
-/* Contenedor de opciones: grilla responsive */
+/* Contenedor de opciones*/
 .row{
   display: flex;
   gap: 12px;
@@ -67,7 +67,7 @@ p#who{
 }
 .row button{
   flex: 1 1 50%;
-  width: 100%;  /* que ocupe su mitad */
+  width: 100%;  
 }
 
 
@@ -76,43 +76,43 @@ button{
   width: 100%;
   background: var(--primary);
   color: #fff;
-  border: 2px solid transparent;          /* borde para foco alto contraste */
-  padding: 14px 16px;                      /* 44px táctiles aprox */
+  border: 2px solid transparent;          
+  padding: 14px 16px;                      
   border-radius: 12px;
   cursor: pointer;
   margin-top: 10px;
   font-weight: 800;
   letter-spacing: .2px;
   font-size: 1rem;
-  min-height: 44px;                        /* tamaño táctil recomendado */
+  min-height: 44px;                        
   transition: background .2s, transform .05s, box-shadow .2s, border-color .2s;
   box-shadow: 0 6px 18px rgba(13,110,253,.15);
 }
 button:hover{ background: var(--primary-hover); }
 button:active{ transform: scale(.985); }
 
-/* Foco de teclado visible y consistente */
+
 button:focus-visible{
   outline: 3px solid color-mix(in oklab, var(--primary), white 25%);
   outline-offset: 3px;
-  border-color: currentColor;              /* mejora visibilidad del contorno */
+  border-color: currentColor;              
 }
 
-/* Estado deshabilitado (a11y) */
+/* Estado deshabilitado */
 button[disabled]{
   opacity: .55;
   cursor: not-allowed;
   filter: saturate(.75);
 }
 
-/* Botón Cerrar sesión (peligro) */
+/* Botón Cerrar sesión */
 #btnLogout{
   background: var(--danger);
   box-shadow: 0 6px 18px rgba(231,76,60,.18);
 }
 #btnLogout:hover{ background: var(--danger-hover); }
 
-/* ====== Breakpoints ====== */
+
 @media (min-width: 480px){
   .row{ grid-template-columns: repeat(2, minmax(0,1fr)); }
   button{ width: auto; }
@@ -122,28 +122,28 @@ button[disabled]{
   .card{ padding: 28px; }
 }
 
-/* Preferencias del usuario */
+
 @media (prefers-reduced-motion: reduce){
   *{ transition: none !important; animation: none !important; }
 }
 
-/* Alto contraste (si el sistema lo pide) */
+
 @media (prefers-contrast: more){
   :root{ --border:#94a3b8; }
   .card{ border-width: 2.5px; }
-  button{ border-color: #0a58ca; }         /* azul más oscuro para contorno */
+  button{ border-color: #0a58ca; }         
   button:focus-visible{ outline-width: 4px; }
 }
 
-/* Modo oscuro opcional */
+
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#0d1117;
     --card:#0f172a;
     --text:#eef2ff;
     --muted:#94a3b8;
-    --border:#334155;                      /* borde visible sobre card oscura */
+    --border:#334155;                      
     --shadow: 0 12px 30px rgba(0,0,0,.45);
   }
-  h1{ color: #79aaff; }                    /* mantiene contraste en dark */
+  h1{ color: #79aaff; }                    
 }

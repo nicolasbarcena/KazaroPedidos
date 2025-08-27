@@ -6,7 +6,7 @@
 }
 
 body {
-  background: #d0e7ff; /* Cambiado a un azul claro */
+  background: #d0e7ff; 
   color: #333;
   line-height: 1.5;
   padding: 10px;
@@ -26,51 +26,14 @@ h1 {
   text-align: center;
   font-size: 2.5rem;
   margin-bottom: 25px;
-  color: #2980b9; /* Azul */
-}
-/* NAVBAR */
-.navbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #154362;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 8px 0;
-  box-shadow: 0 -2px 6px rgba(0,0,0,0.2);
-  z-index: 1000;
+  color: #2980b9; 
 }
 
-.nav-item {
-  color: white;
-  text-decoration: none;
-  font-size: 14px;
-  text-align: center;
-  flex: 1;
-  transition: 0.2s;
-}
-
-.nav-item i {
-  font-size: 20px;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.nav-item span {
-  display: block;
-  font-size: 12px;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
 
 
 h2 {
   margin: 20px 0 10px;
-  color: #000000; /* Azul oscuro */
+  color: #000000; 
   font-size: 1.4rem;
 }
 
@@ -93,7 +56,7 @@ input:focus,
 select:focus {
   outline: none;
   background: #fff;
-  box-shadow: 0 0 0 3px #b0c4e9; /* Azul claro */
+  box-shadow: 0 0 0 3px #b0c4e9; 
 }
 
 /*  Categorías  */
@@ -130,7 +93,7 @@ select:focus {
   color: #fff;
 }
 
-/*  Catálogo Moderno  */
+/*  Catálogo  */
 .catalogo #productos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -154,7 +117,6 @@ select:focus {
   overflow: hidden;
 }
 
-/* Barra de color decorativa */
 .producto::before {
   content: "";
   position: absolute;
@@ -165,7 +127,7 @@ select:focus {
   background: linear-gradient(135deg, #4facfe, #00f2fe); /* Azul */
 }
 
-/* Animación hover */
+/* hover */
 .producto:hover {
   transform: translateY(-10px) scale(1.02);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
@@ -190,7 +152,7 @@ select:focus {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #2c3e50; /* Azul oscuro */
+  color: #2c3e50; 
   transition: color 0.3s;
 }
 
@@ -210,7 +172,7 @@ select:focus {
 /* Botón */
 .producto button {
   margin-top: auto;
-  background: #007bff; /* Azul fuerte */
+  background: #007bff; 
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -222,17 +184,17 @@ select:focus {
 }
 
 .producto button:hover {
-  background: linear-gradient(135deg, #0056b3, #007bff); /* Azul fuerte */
+  background: linear-gradient(135deg, #0056b3, #007bff); 
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
 }
 
 .producto button:focus-visible {
-  outline: 3px solid #4facfe; /* Azul claro */
+  outline: 3px solid #4facfe; 
   outline-offset: 3px;
 }
 
-/*  Carrito  */
+/*  Carrito */
 .carrito {
   overflow-x: auto;
 }
@@ -253,7 +215,7 @@ select:focus {
 }
 
 .carrito th {
-  background: #007bff; /* Azul fuerte */
+  background: #007bff; 
   color: #fff;
 }
 
@@ -273,7 +235,7 @@ select:focus {
 }
 
 #finalizar {
-  background: #195c60; /* Azul fuerte */
+  background: #195c60; 
   color: #fff;
   border: none;
   padding: 12px 18px;
@@ -286,7 +248,7 @@ select:focus {
 }
 
 #finalizar:hover {
-  background: #0056b3; /* Azul oscuro */
+  background: #0056b3; 
 }
 
 /*  Remito  */
@@ -306,7 +268,7 @@ select:focus {
 }
 
 .remito th {
-  background: #007bff; /* Azul fuerte */
+  background: #007bff; 
   color: #fff;
   padding: 10px;
 }
@@ -318,7 +280,7 @@ select:focus {
 }
 
 #enviar {
-  background:  #195c60; /* Azul degradado */
+  background:  #195c60; 
   color: #ffffff;
   border: none;
   padding: 14px 18px;
@@ -331,11 +293,11 @@ select:focus {
 }
 
 #enviar:hover {
-  background: linear-gradient(135deg, #2c3e50, #007bff); /* Azul degradado */
+  background: linear-gradient(135deg, #2c3e50, #007bff); 
   transform: translateY(-2px);
 }
 
-/*  Responsive  */
+/*  Responsive */
 @media (max-width: 768px) {
   h1 {
     font-size: 1.8rem;
@@ -401,7 +363,7 @@ select:focus {
 }
 
 .paginacion button {
-  background: #007bff; /* Azul fuerte */
+  background: #007bff; 
   color: white;
   border: none;
   padding: 8px 14px;
@@ -411,7 +373,7 @@ select:focus {
 }
 
 .paginacion button:hover {
-  background: #0056b3; /* Azul oscuro */
+  background: #0056b3; 
 }
 
 @media (max-width: 600px) {

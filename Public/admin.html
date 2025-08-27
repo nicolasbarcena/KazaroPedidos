@@ -9,21 +9,17 @@
   <meta name="theme-color" content="#3498db">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
-  
   <div class="container">
     <h1>📦 KAZARÓ</h1>
-
     <!-- Datos del cliente -->
     <section class="form-section">
       <h2>Datos Del Cliente</h2>
       <label for="cliente">Nombre y Apellido:</label>
       <input type="text" id="cliente" placeholder="Ingrese su nombre completo" required>
     </section>
-    
     
     <section class="categorias">
       <h2>Categorías</h2>
@@ -36,13 +32,11 @@
       </div>
     </section>
     
-    
     <section class="catalogo">
       <h2>Catálogo de Productos</h2>
       <div id="productos"></div>
     </section>
 
-    
     <section class="carrito">
       <h2>Carrito</h2>
       <table> 
@@ -64,14 +58,12 @@
       <button id="finalizar">Finalizar Pedido</button>
     </section>
 
-    
     <section class="remito" id="remito-section" style="display:none;">
       <h2>Remito</h2>
       <div id="remito"></div>
       <button id="enviar">Enviar por Email</button>
     </section>
   </div>
-  
   
    <script>
   if ("serviceWorker" in navigator) {
@@ -81,7 +73,6 @@
   }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
