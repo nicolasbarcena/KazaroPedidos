@@ -7,7 +7,7 @@
   --card: #ffffff;
   --text: #1f2630;
   --muted: #64748b;
-  --border: #c7d2fe;              /* un poco más visible */
+  --border: #c7d2fe;              
   --radius: 14px;
 
   --danger: #e74c3c;
@@ -21,7 +21,7 @@ body{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: clamp(15px, 1.1vw + .6rem, 17px);   /* +1pt legibilidad */
+  font-size: clamp(15px, 1.1vw + .6rem, 17px);    
   line-height: 1.55;
   padding: clamp(16px, 5vw, 40px);
 }
@@ -33,7 +33,7 @@ h1{
   font-size: clamp(22px, 4vw, 32px);
   font-weight: 800;
   letter-spacing: .2px;
-  color: var(--primary);          /* antes era blanco: bajo contraste sobre bg claro */
+  color: var(--primary);          
 }
 h2{
   font-size: clamp(16px, 3.2vw, 20px);
