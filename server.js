@@ -57,7 +57,9 @@ function requireAuth(req, res, next) {
 }
 
 // --- Rutas estáticas (frontend)
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // --- API: Registro
 app.post('/api/register', async (req, res) => {
