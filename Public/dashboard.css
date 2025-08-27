@@ -1,0 +1,149 @@
+
+
+:root{
+  --primary: #0d6efd;
+  --primary-hover: #0b5ed7;
+  --bg: #f3f7ff;
+  --card: #ffffff;
+  --text: #1f2630;
+  --muted: #64748b;
+  --border: #c7d2fe;              /* un poco más visible */
+  --radius: 14px;
+
+  --danger: #e74c3c;
+  --danger-hover: #c0392b;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+
+body{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: clamp(15px, 1.1vw + .6rem, 17px);   /* +1pt legibilidad */
+  line-height: 1.55;
+  padding: clamp(16px, 5vw, 40px);
+}
+
+/* Títulos */
+h1{
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--primary);          /* antes era blanco: bajo contraste sobre bg claro */
+}
+h2{
+  font-size: clamp(16px, 3.2vw, 20px);
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: var(--text);
+}
+p#who{
+  text-align:center;
+  margin-bottom: 18px;
+  color: var(--muted);
+}
+
+/* Tarjetas */
+.card{
+  background: var(--card);
+  border: 2px solid var(--border);        /* +grosor para mayor visibilidad */
+  border-radius: var(--radius);
+  padding: clamp(16px, 4.5vw, 28px);
+  margin: 16px auto 0;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: var(--shadow);
+}
+
+/* Contenedor de opciones: grilla responsive */
+.row{
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+.row button{
+  flex: 1 1 50%;
+  width: 100%;  /* que ocupe su mitad */
+}
+
+
+/* Botones */
+button{
+  width: 100%;
+  background: var(--primary);
+  color: #fff;
+  border: 2px solid transparent;          /* borde para foco alto contraste */
+  padding: 14px 16px;                      /* 44px táctiles aprox */
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  font-size: 1rem;
+  min-height: 44px;                        /* tamaño táctil recomendado */
+  transition: background .2s, transform .05s, box-shadow .2s, border-color .2s;
+  box-shadow: 0 6px 18px rgba(13,110,253,.15);
+}
+button:hover{ background: var(--primary-hover); }
+button:active{ transform: scale(.985); }
+
+/* Foco de teclado visible y consistente */
+button:focus-visible{
+  outline: 3px solid color-mix(in oklab, var(--primary), white 25%);
+  outline-offset: 3px;
+  border-color: currentColor;              /* mejora visibilidad del contorno */
+}
+
+/* Estado deshabilitado (a11y) */
+button[disabled]{
+  opacity: .55;
+  cursor: not-allowed;
+  filter: saturate(.75);
+}
+
+/* Botón Cerrar sesión (peligro) */
+#btnLogout{
+  background: var(--danger);
+  box-shadow: 0 6px 18px rgba(231,76,60,.18);
+}
+#btnLogout:hover{ background: var(--danger-hover); }
+
+/* ====== Breakpoints ====== */
+@media (min-width: 480px){
+  .row{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  button{ width: auto; }
+}
+@media (min-width: 768px){
+  body{ padding: 48px; }
+  .card{ padding: 28px; }
+}
+
+/* Preferencias del usuario */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
+
+/* Alto contraste (si el sistema lo pide) */
+@media (prefers-contrast: more){
+  :root{ --border:#94a3b8; }
+  .card{ border-width: 2.5px; }
+  button{ border-color: #0a58ca; }         /* azul más oscuro para contorno */
+  button:focus-visible{ outline-width: 4px; }
+}
+
+/* Modo oscuro opcional */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d1117;
+    --card:#0f172a;
+    --text:#eef2ff;
+    --muted:#94a3b8;
+    --border:#334155;                      /* borde visible sobre card oscura */
+    --shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  h1{ color: #79aaff; }                    /* mantiene contraste en dark */
+}

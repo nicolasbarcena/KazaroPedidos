@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App de Pedidos</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3498db">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+  
+  <div class="container">
+    <h1>📦 KAZARÓ</h1>
+
+    <!-- Datos del cliente -->
+    <section class="form-section">
+      <h2>Datos Del Cliente</h2>
+      <label for="cliente">Nombre y Apellido:</label>
+      <input type="text" id="cliente" placeholder="Ingrese su nombre completo" required>
+    </section>
+    
+    
+    <section class="categorias">
+      <h2>Categorías</h2>
+      <div class="categoria-lista">
+        <button class="categoria-btn" onclick="mostrarProductos('liquidos')">💧 Líquidos</button>
+        <button class="categoria-btn" onclick="mostrarProductos('papel')">📄 Papel</button>
+        <button class="categoria-btn" onclick="mostrarProductos('bolsas')">🛍️ Bolsas</button>
+        <button class="categoria-btn" onclick="mostrarProductos('inflamables')">🔥 Inflamables</button>
+        <button class="categoria-btn" onclick="mostrarProductos('varios')">📦 Varios</button>
+      </div>
+    </section>
+    
+    
+    <section class="catalogo">
+      <h2>Catálogo de Productos</h2>
+      <div id="productos"></div>
+    </section>
+
+    
+    <section class="carrito">
+      <h2>Carrito</h2>
+      <table> 
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Artículo</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="carrito-body"></tbody>
+      </table>
+      <div class="total">
+        Total: $<span id="total">0.00</span>
+      </div>
+      <button id="finalizar">Finalizar Pedido</button>
+    </section>
+
+    
+    <section class="remito" id="remito-section" style="display:none;">
+      <h2>Remito</h2>
+      <div id="remito"></div>
+      <button id="enviar">Enviar por Email</button>
+    </section>
+  </div>
+  
+  
+   <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => console.log("Service Worker registrado:", reg))
+      .catch(err => console.error("Error registrando SW:", err));
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>

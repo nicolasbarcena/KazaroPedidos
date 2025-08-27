@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login App - Acceso</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <h1>🔐 Acceso</h1>
+
+  <!-- Conmutador de modo -->
+  <div class="row" style="justify-content:center; margin-bottom:10px;">
+    <button type="button" data-mode="login" class="modeBtn">Iniciar sesión</button>
+    <button type="button" data-mode="register" class="modeBtn">Crear cuenta</button>
+  </div>
+
+  <!-- ÚNICO formulario -->
+  <form id="authForm">
+    <h2 id="formTitle">Inicio de sesión</h2>
+
+    <label for="authUser">Usuario</label>
+    <input id="authUser" type="text" required />
+
+    <label for="authPass">Contraseña</label>
+    <input id="authPass" type="password" required />
+
+    <!-- Sólo visible en modo login -->
+    <div class="row" id="rememberWrap" style="margin-top:12px;">
+      <input id="remember" type="checkbox" />
+      <label for="remember" style="margin:0;">Recordar</label>
+    </div>
+
+    <div class="row">
+      <button type="submit" id="submitBtn">Ingresar</button>
+    </div>
+  </form>
+
+  <script src="./main.js"></script>
+</body>
+</html>
