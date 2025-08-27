@@ -22,14 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLogout = document.getElementById('btnLogout');
 
   // ---------- Página de acceso (form unificado) ----------
-  const authForm = document.getElementById('authForm');            // único formulario
-  const modeButtons = document.querySelectorAll('[data-mode]');    // botones "Iniciar sesión" / "Crear cuenta"
-  const rememberWrap = document.getElementById('rememberWrap');    // contenedor del "Recordar"
-  const rememberChk = document.getElementById('remember');         // checkbox "Recordar"
-  const formTitle = document.getElementById('formTitle');          // <h2> del formulario
-  const submitBtn = document.getElementById('submitBtn');          // botón submit
+  const authForm = document.getElementById('authForm');            
+  const modeButtons = document.querySelectorAll('[data-mode]');    
+  const rememberWrap = document.getElementById('rememberWrap');    
+  const rememberChk = document.getElementById('remember');         
+  const formTitle = document.getElementById('formTitle');          
+  const submitBtn = document.getElementById('submitBtn');          
 
-  let authMode = 'login'; // 'login' | 'register'
+  let authMode = 'login'; 
 
   function setMode(mode) {
     authMode = mode;
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Submit del formulario unificado
   if (authForm) {
-    setMode('login'); // arranca en login por defecto
+    setMode('login'); 
 
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------- Página dashboard: elegir rol ----------
+  // Página dashboard: elegir rol 
   if (who || btnAdmin || btnSupervisor) {
     fetch('/api/session')
       .then(r => r.json())
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ---------- Logout (si existe el botón) ----------
+  // Logout 
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {
       await fetch('/api/logout', { method: 'POST' });

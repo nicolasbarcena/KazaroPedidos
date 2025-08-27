@@ -9,17 +9,24 @@ const SQLiteStore = require('connect-sqlite3')(session);
 
 const app = express();
 
-// === Persistencia (Render) ===
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+/* ============================
+   Persistencia (Render)
+   ============================ */
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data'); // montar Disk aquí
 fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const PUBLIC_DIR = path.join(__dirname, 'public'); // tus HTML/CSS/JS viven acá
 
 const PORT = process.env.PORT || 3000;
 
-// --- Middlewares base ---
+/* ============================
+   Middlewares base
+   ============================ */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.set('trust proxy', 1); // detrás del proxy de Render
+app.set('trust proxy', 1); // detrás del proxy de Render (HTTPS)
 
+/* Sesiones en SQLite (persistentes en DATA_DIR) */
 app.use(
   session({
     store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }),
@@ -29,18 +36,47 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 8, // 8 h
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production', // true en Render (HTTPS)
+      secure: process.env.NODE_ENV === 'production', // true en Render
     },
   })
 );
 
-// --- Frontend estático ---
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
-);
+/* Logger simple (útil para ver en logs qué se pide) */
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
 
-// --- DB: SQLite ---
+/* ============================
+   Frontend estático
+   ============================ */
+app.use(express.static(PUBLIC_DIR));
+
+/* Home explícita */
+app.get('/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (err) => {
+    if (err) {
+      console.error('No se pudo servir public/index.html:', err);
+      res.status(500).send('index.html no encontrado');
+    }
+  });
+});
+
+/* Páginas HTML (deben existir dentro de /public) */
+app.get('/dashboard', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
+app.get('/admin', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/supervisor', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'supervisor.html')));
+
+/* Ruta de depuración para verificar el contenido de /public en Render (borralo luego si querés) */
+app.get('/__debug', (_req, res) => {
+  const exists = fs.existsSync(PUBLIC_DIR);
+  const files = exists ? fs.readdirSync(PUBLIC_DIR) : [];
+  res.json({ publicDir: PUBLIC_DIR, exists, files });
+});
+
+/* ============================
+   Base de datos SQLite
+   ============================ */
 const db = new Database(path.join(DATA_DIR, 'db.sqlite'));
 db.pragma('journal_mode = wal');
 
@@ -53,13 +89,17 @@ db.exec(`
   )
 `);
 
-// --- Auth helper ---
+/* ============================
+   Helpers de auth
+   ============================ */
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.status(401).json({ ok: false, error: 'NO_AUTH' });
   next();
 }
 
-// --- API ---
+/* ============================
+   API
+   ============================ */
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -117,21 +157,26 @@ app.post('/api/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-// --- Páginas (si existen los HTML en /public) ---
-app.get('/dashboard', (_req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))
-);
-app.get('/admin', (_req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'))
-);
-app.get('/supervisor', (_req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'supervisor.html'))
-);
-
-// --- Healthcheck opcional (útil en PaaS) ---
+/* ============================
+   Healthcheck & 404/Errores
+   ============================ */
 app.get('/healthz', (_req, res) => res.send('ok'));
 
-// --- Start ---
+// 404 para APIs desconocidas (evita que /api/* caiga en index.html)
+app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'NOT_FOUND' }));
+
+// Handler de errores
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
+});
+
+/* ============================
+   Start
+   ============================ */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
+  // Sanity check al arrancar
+  const indexPath = path.join(PUBLIC_DIR, 'index.html');
+  console.log('PUBLIC_DIR:', PUBLIC_DIR, 'index.html exists:', fs.existsSync(indexPath));
 });
