@@ -24,7 +24,7 @@ self.addEventListener('activate', (event) => {
       )
     ).then(() => self.clients.claim())
      .then(async () => {
-       // Recarga todas las pestañas para tomar el SW nuevo
+       
        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
        for (const client of clients) client.navigate(client.url);
      })
@@ -35,8 +35,7 @@ self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// HTML/CSS/JS: network-first → siempre trae lo último del servidor
-// Otros (imágenes, etc.): cache-first
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
