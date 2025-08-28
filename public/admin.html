@@ -63,6 +63,25 @@
       <button id="enviar">Enviar por Email</button>
     </section>
   </div>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+      await reg.update();                      // busca versión nueva ya
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+      // recarga automática cuando entra el SW nuevo
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!reloaded) { reloaded = true; location.reload(); }
+      });
+    } catch (e) {
+      console.error('SW error:', e);
+    }
+  });
+}
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="script.js"></script>

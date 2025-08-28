@@ -1,33 +1,33 @@
-// sw.js — actualización fiable de assets
-const SW_VERSION = 'v9'; // ← si cambias este archivo, subí el número (v10, v11…)
+// sw.js — actualiza HTML/CSS/JS al instante y mantiene offline
+const SW_VERSION = 'v10';                 // súbelo v11, v12... cuando edites este archivo
 const STATIC_CACHE  = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
-// Precarga solo el shell mínimo (no metas .css / .js acá)
+// Precarga solo el "shell" (HTML principal y manifest/icon).
+// Agrega aquí MÁS páginas si las tienes (p.ej. '/otra.html').
 const PRECACHE = [
-  '/', '/index.html', '/dashboard.html',
+  '/', '/index.html',
+  '/dashboard.html', '/admin.html', '/supervisor.html',
   '/manifest.json', '/icon-192.png'
 ];
 
 // Instala y precachea lo básico
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then(cache => cache.addAll(PRECACHE))
-  );
+  event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll(PRECACHE)));
   self.skipWaiting(); // activa la nueva versión sin esperar
 });
 
-// Activa, limpia caches viejos, toma control y recarga las pestañas
+// Activa, elimina caches viejos, toma control y recarga las pestañas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => ![STATIC_CACHE, RUNTIME_CACHE].includes(k))
-            .map(k => caches.delete(k))
+      Promise.all(keys
+        .filter(k => ![STATIC_CACHE, RUNTIME_CACHE].includes(k))
+        .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
      .then(async () => {
-       // (opcional, muy útil) recarga pestañas para que tomen SW nuevo
+       // recarga todas las ventanas para que tomen el SW nuevo
        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
        for (const client of clients) client.navigate(client.url);
      })
@@ -40,8 +40,8 @@ self.addEventListener('message', (e) => {
 });
 
 // Estrategias:
-// - HTML/CSS/JS → network-first (toma lo último; si falla, cache)
-// - Otros (imágenes, etc.) → cache-first
+// - HTML / CSS / JS -> network-first (toma lo último; si falla, cache)
+// - Otros (imágenes, etc.) -> cache-first
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -51,25 +51,27 @@ self.addEventListener('fetch', (event) => {
   const isCode = url.pathname.endsWith('.css') || url.pathname.endsWith('.js');
 
   if (isHTML || isCode) {
-    // NETWORK FIRST
+    // NETWORK FIRST (evita CSS/JS “congelados”)
     event.respondWith(
-      fetch(req, { cache: 'no-store' }).then((res) => {
-        const copy = res.clone();
-        caches.open(RUNTIME_CACHE).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match(req))
+      fetch(req, { cache: 'no-store' })
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(RUNTIME_CACHE).then(c => c.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req))
     );
     return;
   }
 
-  // CACHE FIRST para lo demás (rápido y offline)
+  // CACHE FIRST para el resto (imágenes, etc.)
   event.respondWith(
-    caches.match(req).then(cached => {
-      return cached || fetch(req).then(res => {
+    caches.match(req).then(cached =>
+      cached || fetch(req).then(res => {
         const copy = res.clone();
         caches.open(RUNTIME_CACHE).then(c => c.put(req, copy));
         return res;
-      });
-    })
+      })
+    )
   );
 });
