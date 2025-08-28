@@ -35,13 +35,28 @@
       <button type="submit" id="submitBtn">Ingresar</button>
     </div>
   </form>
- <script>
+<script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js', { updateViaCache: 'none' })
-      .then(reg => reg.update()) // fuerza a buscar versión nueva
-      .catch(err => console.error('SW error:', err));
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+
+      // Pide buscar actualizaciones ahora
+      await reg.update();
+
+      // Si hay un SW "waiting", pedile que salte a activo
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+      // Cuando cambie el controlador (entra el SW nuevo), recarga la página una vez
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+    } catch (err) {
+      console.error('SW error:', err);
+    }
   });
 }
 </script>
