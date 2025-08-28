@@ -1,90 +1,114 @@
-// server.js (para Render free, sin disco, con Postgres externo)
+// server.js — Render (free) + Postgres externo (Neon) + cookie-session
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcrypt');              // si prefieres 0 nativos: usa 'bcryptjs'
 const cookieSession = require('cookie-session');
 const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ======= DB: Postgres externo (Neon/Supabase/ElephantSQL) =======
+// --- Validación de entorno ---
+if (!process.env.DATABASE_URL) {
+  console.error('❌ Falta la variable de entorno DATABASE_URL');
+  process.exit(1);
+}
+const DB_URL = process.env.DATABASE_URL.trim();
+// Asegura SSL con Neon/Supabase (si alguien pegó una URL sin sslmode)
+const urlHasSSL = /\bsslmode=require\b/i.test(DB_URL);
+const normalizedDbUrl = urlHasSSL ? DB_URL : (DB_URL + (DB_URL.includes('?') ? '&' : '?') + 'sslmode=require');
+
+function mask(str) {
+  try {
+    const u = new URL(str);
+    if (u.password) u.password = '***';
+    return u.toString();
+  } catch {
+    return '(no parseable)';
+  }
+}
+
+// --- Pool PG ---
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // <-- la pones en Render
-  // Para proveedores que requieren SSL (Neon, Supabase):
+  connectionString: normalizedDbUrl,
+  // Neon requiere SSL; esta opción evita fallos por CA en PaaS
   ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
 });
 
-// Creamos tabla si no existe
+// Crea esquema en arranque
 async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT now()
-    );
-  `);
+  console.log('🔗 Conectando a Postgres:', mask(normalizedDbUrl));
+  const cx = await pool.connect(); // si falla, cae al catch de abajo
+  try {
+    await cx.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+    `);
+    console.log('✅ Esquema OK');
+  } finally {
+    cx.release();
+  }
 }
 
-// ======= Middlewares base =======
+// --- Middlewares base ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
 
-// Sesión basada en cookies (no guarda nada en servidor)
-app.use(
-  cookieSession({
-    name: 'session',
-    keys: [process.env.SESSION_SECRET || 'dev-secret'],
-    maxAge: 1000 * 60 * 60 * 8, // 8 horas
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production', // true en Render
-  })
-);
+// Sesión basada en cookie (nada en servidor)
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'dev-secret'],
+  maxAge: 1000 * 60 * 60 * 8,     // 8 horas
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+}));
 
-// Logs simples (útil en Render)
+// Logs útiles en Render
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// ======= Frontend estático =======
+// --- Frontend estático ---
 const PUBLIC_DIR = path.join(__dirname, 'public');
 app.use(express.static(PUBLIC_DIR));
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   const file = path.join(PUBLIC_DIR, 'index.html');
   if (!fs.existsSync(file)) return res.status(500).send('Falta public/index.html');
   res.sendFile(file);
 });
-
 app.get('/dashboard', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
 app.get('/admin',     (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/supervisor',(_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'supervisor.html')));
 
-// ======= Helpers =======
+// --- Helpers ---
 function requireAuth(req, res, next) {
   if (!req.session || !req.session.user) return res.status(401).json({ ok: false, error: 'NO_AUTH' });
   next();
 }
 
-// ======= API =======
+// --- API ---
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
 
-    const userExists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
-    if (userExists.rowCount) return res.status(409).json({ ok: false, error: 'USUARIO_YA_EXISTE' });
+    const exists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (exists.rowCount) return res.status(409).json({ ok: false, error: 'USUARIO_YA_EXISTE' });
 
     const hash = await bcrypt.hash(password, 10);
     await pool.query('INSERT INTO users (username, password_hash) VALUES ($1, $2)', [username, hash]);
 
     res.json({ ok: true, msg: 'REGISTRADO' });
   } catch (e) {
-    console.error(e);
+    console.error('register error:', e);
     res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
   }
 });
@@ -101,13 +125,12 @@ app.post('/api/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
 
-    // Guardamos datos mínimos en la cookie
     req.session.user = { id: user.id, username: user.username };
     req.session.role = null;
 
     res.json({ ok: true, msg: 'LOGIN_OK' });
   } catch (e) {
-    console.error(e);
+    console.error('login error:', e);
     res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
   }
 });
@@ -127,27 +150,32 @@ app.post('/api/choose-role', requireAuth, (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  req.session = null; // borra cookie
+  req.session = null;
   res.json({ ok: true });
 });
 
-// ======= Salud y Debug =======
+// --- Salud / Debug / Errores ---
 app.get('/healthz', (_req, res) => res.send('ok'));
 app.get('/__debug', async (_req, res) => {
   let users = 0;
-  try {
-    const r = await pool.query('SELECT COUNT(*) FROM users');
-    users = Number(r.rows[0].count);
-  } catch {}
+  try { const r = await pool.query('SELECT COUNT(*) FROM users'); users = Number(r.rows[0].count); } catch {}
   res.json({ publicDir: PUBLIC_DIR, hasDbUrl: !!process.env.DATABASE_URL, users });
 });
 
-// ======= Arranque =======
+// Evita que /api/* desconocidas caigan al index
+app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'NOT_FOUND' }));
+
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
+});
+
+// --- Arranque ---
 ensureSchema()
   .then(() => app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
+    console.log(`🚀 Servidor escuchando en http://0.0.0.0:${PORT}`);
   }))
   .catch(err => {
-    console.error('No se pudo inicializar DB', err);
+    console.error('❌ No se pudo inicializar DB:', err);
     process.exit(1);
   });
