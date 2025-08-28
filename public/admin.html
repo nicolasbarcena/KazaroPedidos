@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>App de Pedidos</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css?v=2025-08-28-2">
+
   <meta name="theme-color" content="#3498db">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -64,24 +65,21 @@
     </section>
   </div>
 <script>
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      await reg.update();                      // busca versión nueva ya
+      await reg.update();
       if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-      // recarga automática cuando entra el SW nuevo
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!reloaded) { reloaded = true; location.reload(); }
       });
-    } catch (e) {
-      console.error('SW error:', e);
-    }
+    } catch (e) { console.error('SW error:', e); }
   });
 }
 </script>
+
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="script.js"></script>

@@ -1,23 +1,20 @@
-// sw.js — actualiza HTML/CSS/JS al instante y mantiene offline
-const SW_VERSION = 'v10';                 // súbelo v11, v12... cuando edites este archivo
+// sw.js — actualiza HTML/CSS/JS al instante y mantiene offline básico
+const SW_VERSION = 'v13';                       // ⬅️ súbelo v13, v14... cuando cambies el SW
 const STATIC_CACHE  = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
-// Precarga solo el "shell" (HTML principal y manifest/icon).
-// Agrega aquí MÁS páginas si las tienes (p.ej. '/otra.html').
+// Precarga solo HTML/manifest/icon (no CSS/JS para evitar “congelarlos”)
 const PRECACHE = [
   '/', '/index.html',
   '/dashboard.html', '/admin.html', '/supervisor.html',
   '/manifest.json', '/icon-192.png'
 ];
 
-// Instala y precachea lo básico
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll(PRECACHE)));
-  self.skipWaiting(); // activa la nueva versión sin esperar
+  event.waitUntil(caches.open(STATIC_CACHE).then(c => c.addAll(PRECACHE)));
+  self.skipWaiting();
 });
 
-// Activa, elimina caches viejos, toma control y recarga las pestañas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -27,21 +24,19 @@ self.addEventListener('activate', (event) => {
       )
     ).then(() => self.clients.claim())
      .then(async () => {
-       // recarga todas las ventanas para que tomen el SW nuevo
+       // Recarga todas las pestañas para tomar el SW nuevo
        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
        for (const client of clients) client.navigate(client.url);
      })
   );
 });
 
-// Permite forzar skipWaiting desde la página si lo necesitás
 self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Estrategias:
-// - HTML / CSS / JS -> network-first (toma lo último; si falla, cache)
-// - Otros (imágenes, etc.) -> cache-first
+// HTML/CSS/JS: network-first → siempre trae lo último del servidor
+// Otros (imágenes, etc.): cache-first
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -51,10 +46,9 @@ self.addEventListener('fetch', (event) => {
   const isCode = url.pathname.endsWith('.css') || url.pathname.endsWith('.js');
 
   if (isHTML || isCode) {
-    // NETWORK FIRST (evita CSS/JS “congelados”)
     event.respondWith(
       fetch(req, { cache: 'no-store' })
-        .then((res) => {
+        .then(res => {
           const copy = res.clone();
           caches.open(RUNTIME_CACHE).then(c => c.put(req, copy));
           return res;
@@ -64,7 +58,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CACHE FIRST para el resto (imágenes, etc.)
   event.respondWith(
     caches.match(req).then(cached =>
       cached || fetch(req).then(res => {

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="/dashboard.css?v=2025-08-28-2">
+
   <title>Dashboard</title>
 </head>
 <body>
@@ -22,24 +23,21 @@
     <button id="btnLogout">Cerrar sesión</button>
   </div>
 <script>
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      await reg.update();                      // busca versión nueva ya
+      await reg.update();
       if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-      // recarga automática cuando entra el SW nuevo
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!reloaded) { reloaded = true; location.reload(); }
       });
-    } catch (e) {
-      console.error('SW error:', e);
-    }
+    } catch (e) { console.error('SW error:', e); }
   });
 }
 </script>
+
 
   <script src="./main.js"></script>
 </body>

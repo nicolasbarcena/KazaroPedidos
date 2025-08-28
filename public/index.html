@@ -36,26 +36,21 @@
     </div>
   </form>
 <script>
-/* En local puedes comentar este if si querés, pero así evitas SW en localhost:
-   if ('serviceWorker' in navigator && location.hostname !== 'localhost') { ... } */
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      await reg.update(); // busca versión nueva ya
+      await reg.update();
       if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-      // recarga automática cuando entra el SW nuevo
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!reloaded) { reloaded = true; location.reload(); }
       });
-    } catch (e) {
-      console.error('SW error:', e);
-    }
+    } catch (e) { console.error('SW error:', e); }
   });
 }
 </script>
+
 
   <script src="./main.js"></script>
 </body>

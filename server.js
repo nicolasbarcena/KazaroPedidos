@@ -89,16 +89,12 @@ app.use((req, _res, next) => {
    ========================= */
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-/**
- * MUY IMPORTANTE:
- * Sirve /sw.js con no-store SIEMPRE para que el navegador
- * no lo cachee y tome la versión nueva tras cada deploy.
- * Esta ruta debe ir ANTES del express.static.
- */
 app.get('/sw.js', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.sendFile(path.join(PUBLIC_DIR, 'sw.js'));
 });
+
+app.use(express.static(PUBLIC_DIR));
 
 /**
  * En desarrollo (NODE_ENV !== 'production'), desactiva caché

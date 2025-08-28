@@ -9,7 +9,7 @@
   --radius:14px;
   --danger:#e74c3c;
   --danger-hover:#c0392b;
-  --shadow:0 8px 24px rgba(13,110,253,.10); /* ← añadida */
+  --shadow:0 8px 24px rgba(13,110,253,.10); 
 }
 
 *{ box-sizing:border-box; margin:0; padding:0; }
@@ -20,7 +20,7 @@ body{
   color:var(--text);
   font-size:clamp(15px,1.1vw + .6rem,17px);
   line-height:1.55;
-  /* padding con safe-area para iOS */
+  
   padding:clamp(16px,5vw,40px);
   padding-left:calc(clamp(16px,5vw,40px) + env(safe-area-inset-left,0px));
   padding-right:calc(clamp(16px,5vw,40px) + env(safe-area-inset-right,0px));
@@ -34,7 +34,7 @@ h1{
   font-size:clamp(22px,4vw,32px);
   font-weight:800;
   letter-spacing:.2px;
-  color:#ffffff; /* mantengo tu color */
+  color:#ffffff; 
 }
 h2{
   font-size:clamp(16px,3.2vw,20px);
@@ -62,8 +62,8 @@ p#who{
 
 /* Contenedor de opciones — mobile-first */
 .row{
-  display:grid;                  /* ← grid en lugar de flex */
-  grid-template-columns:1fr;     /* 1 columna en móviles */
+  display:grid;                  
+  grid-template-columns:1fr;     
   gap:12px;
   margin-top:12px;
 }
@@ -84,7 +84,7 @@ button{
   font-weight:800;
   letter-spacing:.2px;
   font-size:1rem;
-  min-height:44px;               /* objetivo táctil accesible */
+  min-height:44px;               
   transition:background .2s, transform .05s, box-shadow .2s, border-color .2s;
   box-shadow:0 6px 18px rgba(13,110,253,.15);
 }
@@ -117,8 +117,8 @@ button[disabled]{
 
 /* Breakpoints */
 @media (min-width:480px){
-  .row{ grid-template-columns:repeat(2, minmax(0,1fr)); }  /* 2 columnas */
-  /* los botones ya ocupan 100% de su celda */
+  .row{ grid-template-columns:repeat(2, minmax(0,1fr)); }  
+  
 }
 @media (min-width:768px){
   body{ padding:48px; }
@@ -144,5 +144,5 @@ button[disabled]{
     --border:#334155;
     --shadow:0 12px 30px rgba(0,0,0,.45);
   }
-  h1{ color:#79aaff; } /* tu toque azul en dark */
+  h1{ color:#79aaff; } 
 }
