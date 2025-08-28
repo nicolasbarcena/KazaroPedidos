@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login App - Acceso</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="/login.css?v=2025-08-28-1">
+
+
 </head>
 <body>
   <h1>🔐 Acceso</h1>
@@ -36,30 +38,27 @@
     </div>
   </form>
 <script>
+/* En local puedes comentar este if si querés, pero así evitas SW en localhost:
+   if ('serviceWorker' in navigator && location.hostname !== 'localhost') { ... } */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-
-      // Pide buscar actualizaciones ahora
-      await reg.update();
-
-      // Si hay un SW "waiting", pedile que salte a activo
+      await reg.update(); // busca versión nueva ya
       if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
 
-      // Cuando cambie el controlador (entra el SW nuevo), recarga la página una vez
+      // recarga automática cuando entra el SW nuevo
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (reloaded) return;
-        reloaded = true;
-        window.location.reload();
+        if (!reloaded) { reloaded = true; location.reload(); }
       });
-    } catch (err) {
-      console.error('SW error:', err);
+    } catch (e) {
+      console.error('SW error:', e);
     }
   });
 }
 </script>
+
   <script src="./main.js"></script>
 </body>
 </html>
