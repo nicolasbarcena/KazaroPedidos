@@ -1,5 +1,5 @@
 // sw.js — actualiza HTML/CSS/JS al instante y mantiene offline básico
-const SW_VERSION = 'v13';                       // ⬅️ súbelo v13, v14... cuando cambies el SW
+const SW_VERSION = 'v14';                       // ⬅️ súbelo v13, v14... cuando cambies el SW
 const STATIC_CACHE  = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 
