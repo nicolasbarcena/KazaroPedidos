@@ -1,4 +1,4 @@
-// server.js
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -9,14 +9,14 @@ const SQLiteStore = require('connect-sqlite3')(session);
 
 const app = express();
 
-// ===== Persistencia (Render) =====
+// Persistencia
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const PUBLIC_DIR = path.join(__dirname, 'public'); // <- AQUÍ deben estar tus HTML/CSS/JS
+const PUBLIC_DIR = path.join(__dirname, 'public'); 
 const PORT = process.env.PORT || 3000;
 
-// ===== Middlewares base =====
+// Middlewares base 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
@@ -41,7 +41,7 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ===== Frontend estático =====
+// Frontend estático 
 app.use(express.static(PUBLIC_DIR));
 
 // Home explícita
@@ -59,14 +59,14 @@ app.get('/dashboard', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboa
 app.get('/admin',     (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/supervisor',(_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'supervisor.html')));
 
-// Depuración: lista lo que Render ve en /public
+// lista lo que Render ve en /public
 app.get('/__debug', (_req, res) => {
   const exists = fs.existsSync(PUBLIC_DIR);
   const files = exists ? fs.readdirSync(PUBLIC_DIR) : [];
   res.json({ publicDir: PUBLIC_DIR, exists, files });
 });
 
-// ===== DB SQLite =====
+// DB SQLite 
 const db = new Database(path.join(DATA_DIR, 'db.sqlite'));
 db.pragma('journal_mode = wal');
 db.exec(`
@@ -78,13 +78,13 @@ db.exec(`
   )
 `);
 
-// ===== Auth helper =====
+// Auth helper 
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.status(401).json({ ok: false, error: 'NO_AUTH' });
   next();
 }
 
-// ===== API =====
+// API
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};

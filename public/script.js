@@ -37,7 +37,7 @@ async function cargarProductos() {
     const text = await res.text();
 
     const data = Papa.parse(text, {
-      header: true,   // primera fila como cabeceras
+      header: true,   
       skipEmptyLines: true
     });
 
@@ -90,7 +90,7 @@ function mostrarProductos(categoria, pagina = 1) {
       
       contenedor.appendChild(div);
     });
-    // <p>Stock: <span id="stock-${prod.code}">${prod.stock}</span></p> para mostar el stock entre linea 55 - 56
+  
     
   // Controles de paginacion
   const paginacion = document.createElement("div"); 

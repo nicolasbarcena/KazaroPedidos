@@ -1,5 +1,4 @@
-// public/main.js
-// ========= Utilidades de "Recordar" en el navegador =========
+
 const STORAGE_KEY = 'loginapp_credentials';
 
 function saveRemembered(username, password) {
@@ -13,15 +12,15 @@ function clearRemembered() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// ================== App ==================
+
 document.addEventListener('DOMContentLoaded', () => {
-  // ---------- Elementos comunes (dashboard y demás) ----------
+  //Elementos comunes
   const who = document.getElementById('who');
   const btnAdmin = document.getElementById('btnAdmin');
   const btnSupervisor = document.getElementById('btnSupervisor');
   const btnLogout = document.getElementById('btnLogout');
 
-  // ---------- Página de acceso (form unificado) ----------
+  // Página de acceso
   const authForm = document.getElementById('authForm');            
   const modeButtons = document.querySelectorAll('[data-mode]');    
   const rememberWrap = document.getElementById('rememberWrap');    
@@ -53,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Submit del formulario unificado
+  // formulario unificado
   if (authForm) {
     setMode('login'); 
 
@@ -89,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           window.location.href = '/dashboard';
         } else {
-          // Registro OK -> pasar a login
+          
           alert('Usuario registrado. Ahora iniciá sesión.');
           setMode('login');
           document.getElementById('authUser')?.focus();
