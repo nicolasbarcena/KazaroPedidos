@@ -1,101 +1,90 @@
-
-const fs = require('fs');
+// server.js (para Render free, sin disco, con Postgres externo)
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const bcrypt = require('bcrypt');
-const Database = require('better-sqlite3');
-const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const cookieSession = require('cookie-session');
+const { Pool } = require('pg');
 
 const app = express();
-
-// Persistencia
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const PUBLIC_DIR = path.join(__dirname, 'public'); 
 const PORT = process.env.PORT || 3000;
 
-// Middlewares base 
+// ======= DB: Postgres externo (Neon/Supabase/ElephantSQL) =======
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // <-- la pones en Render
+  // Para proveedores que requieren SSL (Neon, Supabase):
+  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+});
+
+// Creamos tabla si no existe
+async function ensureSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+}
+
+// ======= Middlewares base =======
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
 
+// Sesión basada en cookies (no guarda nada en servidor)
 app.use(
-  session({
-    store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }),
-    secret: process.env.SESSION_SECRET || 'cambia-este-secreto',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 8,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    },
+  cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'dev-secret'],
+    maxAge: 1000 * 60 * 60 * 8, // 8 horas
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // true en Render
   })
 );
 
-// Logger simple
+// Logs simples (útil en Render)
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// Frontend estático 
+// ======= Frontend estático =======
+const PUBLIC_DIR = path.join(__dirname, 'public');
 app.use(express.static(PUBLIC_DIR));
 
-// Home explícita
 app.get('/', (req, res) => {
-  const indexPath = path.join(PUBLIC_DIR, 'index.html');
-  if (!fs.existsSync(indexPath)) {
-    console.error('NO ENCONTRADO:', indexPath);
-    return res.status(500).send('Falta public/index.html en el deploy');
-  }
-  res.sendFile(indexPath);
+  const file = path.join(PUBLIC_DIR, 'index.html');
+  if (!fs.existsSync(file)) return res.status(500).send('Falta public/index.html');
+  res.sendFile(file);
 });
 
-// Páginas
 app.get('/dashboard', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
 app.get('/admin',     (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/supervisor',(_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'supervisor.html')));
 
-// lista lo que Render ve en /public
-app.get('/__debug', (_req, res) => {
-  const exists = fs.existsSync(PUBLIC_DIR);
-  const files = exists ? fs.readdirSync(PUBLIC_DIR) : [];
-  res.json({ publicDir: PUBLIC_DIR, exists, files });
-});
-
-// DB SQLite 
-const db = new Database(path.join(DATA_DIR, 'db.sqlite'));
-db.pragma('journal_mode = wal');
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
-// Auth helper 
+// ======= Helpers =======
 function requireAuth(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ ok: false, error: 'NO_AUTH' });
+  if (!req.session || !req.session.user) return res.status(401).json({ ok: false, error: 'NO_AUTH' });
   next();
 }
 
-// API
+// ======= API =======
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
-    const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-    if (exists) return res.status(409).json({ ok: false, error: 'USUARIO_YA_EXISTE' });
-    const password_hash = await bcrypt.hash(password, 10);
-    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, password_hash);
+
+    const userExists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (userExists.rowCount) return res.status(409).json({ ok: false, error: 'USUARIO_YA_EXISTE' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('INSERT INTO users (username, password_hash) VALUES ($1, $2)', [username, hash]);
+
     res.json({ ok: true, msg: 'REGISTRADO' });
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
   }
 });
@@ -104,22 +93,28 @@ app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
-    const user = db.prepare('SELECT id, username, password_hash FROM users WHERE username = ?').get(username);
-    if (!user) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
+
+    const q = await pool.query('SELECT id, username, password_hash FROM users WHERE username = $1', [username]);
+    if (!q.rowCount) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
+
+    const user = q.rows[0];
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
+
+    // Guardamos datos mínimos en la cookie
     req.session.user = { id: user.id, username: user.username };
     req.session.role = null;
+
     res.json({ ok: true, msg: 'LOGIN_OK' });
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
   }
 });
 
 app.get('/api/session', (req, res) => {
-  if (!req.session.user) return res.json({ ok: true, loggedIn: false });
-  res.json({ ok: true, loggedIn: true, user: req.session.user, role: req.session.role || null });
+  if (!req.session || !req.session.user) return res.json({ ok: true, loggedIn: false });
+  res.json({ ok: true, loggedIn: true, user: req.session.user, role: req.session.role ?? null });
 });
 
 app.post('/api/choose-role', requireAuth, (req, res) => {
@@ -132,18 +127,27 @@ app.post('/api/choose-role', requireAuth, (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  req.session = null; // borra cookie
+  res.json({ ok: true });
 });
 
-// Healthcheck y errores
+// ======= Salud y Debug =======
 app.get('/healthz', (_req, res) => res.send('ok'));
-app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'NOT_FOUND' }));
-app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
+app.get('/__debug', async (_req, res) => {
+  let users = 0;
+  try {
+    const r = await pool.query('SELECT COUNT(*) FROM users');
+    users = Number(r.rows[0].count);
+  } catch {}
+  res.json({ publicDir: PUBLIC_DIR, hasDbUrl: !!process.env.DATABASE_URL, users });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
-  console.log('PUBLIC_DIR:', PUBLIC_DIR, 'index.html exists:', fs.existsSync(path.join(PUBLIC_DIR, 'index.html')));
-});
+// ======= Arranque =======
+ensureSchema()
+  .then(() => app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
+  }))
+  .catch(err => {
+    console.error('No se pudo inicializar DB', err);
+    process.exit(1);
+  });
