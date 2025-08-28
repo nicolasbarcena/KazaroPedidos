@@ -30,7 +30,7 @@ h1{
   font-size: clamp(22px, 4vw, 32px);
   font-weight: 800;
   letter-spacing: .2px;
-  color: var(--primary);          
+  color: #ffffff;          
 }
 h2{
   font-size: clamp(16px, 3.2vw, 20px);
