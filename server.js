@@ -223,3 +223,75 @@ ensureSchema()
     process.exit(1);
   });
 
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) return res.status(400).json({ ok: false, error: 'FALTAN_DATOS' });
+
+    const q = await pool.query('SELECT id, username, password_hash FROM users WHERE username = $1', [username]);
+    if (!q.rowCount) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
+
+    const user = q.rows[0];
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return res.status(401).json({ ok: false, error: 'CREDENCIALES' });
+
+    req.session.user = { id: user.id, username: user.username };
+    req.session.role = null;
+
+    res.json({ ok: true, msg: 'LOGIN_OK' });
+  } catch (e) {
+    console.error('login error:', e);
+    res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
+  }
+});
+
+app.get('/api/session', (req, res) => {
+  if (!req.session || !req.session.user) return res.json({ ok: true, loggedIn: false });
+  res.json({ ok: true, loggedIn: true, user: req.session.user, role: req.session.role ?? null });
+});
+
+app.post('/api/choose-role', requireAuth, (req, res) => {
+  const { role } = req.body || {};
+  if (!['administrativos', 'supervisores'].includes(role)) {
+    return res.status(400).json({ ok: false, error: 'ROL_INVALIDO' });
+  }
+  req.session.role = role;
+  res.json({ ok: true, role });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session = null;
+  res.json({ ok: true });
+});
+
+/* =========================
+   Salud / Debug / Errores
+   ========================= */
+app.get('/healthz', (_req, res) => res.send('ok'));
+app.get('/__debug', async (_req, res) => {
+  let users = 0;
+  try { const r = await pool.query('SELECT COUNT(*) FROM users'); users = Number(r.rows[0].count); } catch {}
+  res.json({ publicDir: PUBLIC_DIR, hasDbUrl: !!process.env.DATABASE_URL, users });
+});
+
+// Evita que /api/* desconocidas caigan al index
+app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'NOT_FOUND' }));
+
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ ok: false, error: 'ERROR_SERVER' });
+});
+
+/* =========================
+   Arranque
+   ========================= */
+ensureSchema()
+  .then(() => app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor escuchando en http://0.0.0.0:${PORT}`);
+  }))
+  .catch(err => {
+    console.error('❌ No se pudo inicializar DB:', err);
+    process.exit(1);
+  });
+
