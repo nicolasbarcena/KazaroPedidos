@@ -1,57 +1,72 @@
+<!-- public/catalogo.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login App - Acceso</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/login.css?v=2025-08-28-1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App de Pedidos</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="theme-color" content="#3498db">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-  <h1>🔐 Acceso</h1>
- 
-  <div class="row" style="justify-content:center; margin-bottom:10px;">
-    <button type="button" data-mode="login" class="modeBtn">Iniciar sesión</button>
-    <button type="button" data-mode="register" class="modeBtn">Crear cuenta</button>
+  <div class="container">
+    <h1>📦 KAZARÓ</h1>
+
+    <!-- Banner del filtro aplicado -->
+    <div id="filtroInfo"></div>
+
+    <section class="form-section">
+      <h2>Datos Del Cliente</h2>
+      <label for="cliente">Nombre y Apellido:</label>
+      <input type="text" id="cliente" placeholder="Ingrese su nombre completo" required>
+    </section>
+
+    <section class="categorias">
+      <h2>Categorías</h2>
+      <div class="categoria-lista">
+        <button class="categoria-btn" onclick="mostrarProductos('liquidos')">💧 Líquidos</button>
+        <button class="categoria-btn" onclick="mostrarProductos('papel')">📄 Papel</button>
+        <button class="categoria-btn" onclick="mostrarProductos('bolsas')">🛍️ Bolsas</button>
+        <button class="categoria-btn" onclick="mostrarProductos('inflamables')">🔥 Inflamables</button>
+        <button class="categoria-btn" onclick="mostrarProductos('varios')">📦 Varios</button>
+      </div>
+    </section>
+
+    <section class="catalogo">
+      <h2>Catálogo de Productos</h2>
+      <div id="productos"></div>
+    </section>
+
+    <section class="carrito">
+      <h2>Carrito</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Artículo</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="carrito-body"></tbody>
+      </table>
+      <div class="total">Total: $<span id="total">0.00</span></div>
+      <button id="finalizar">Finalizar Pedido</button>
+    </section>
+
+    <section class="remito" id="remito-section" style="display:none;">
+      <h2>Remito</h2>
+      <div id="remito"></div>
+      <button id="enviar">Enviar por Email</button>
+    </section>
   </div>
 
-  <!-- formulario -->
-  <form id="authForm">
-    <h2 id="formTitle">Inicio de sesión</h2>
-
-    <label for="authUser">Usuario</label>
-    <input id="authUser" type="text" required />
-
-    <label for="authPass">Contraseña</label>
-    <input id="authPass" type="password" required />
-
-    
-    <div class="row" id="rememberWrap" style="margin-top:12px;">
-      <input id="remember" type="checkbox" />
-      <label for="remember" style="margin:0;">Recordar</label>
-    </div>
-
-    <div class="row">
-      <button type="submit" id="submitBtn">Ingresar</button>
-    </div>
-  </form>
-<script>
-if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      await reg.update();
-      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      let reloaded = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!reloaded) { reloaded = true; location.reload(); }
-      });
-    } catch (e) { console.error('SW error:', e); }
-  });
-}
-</script>
-
-
-  <script src="./main.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>

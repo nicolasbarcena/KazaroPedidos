@@ -3,13 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Supervisores</title>
-  
+  <title>Seleccionar Supervisor y Servicio</title>
+  <link rel="stylesheet" href="supervisor.css">
 </head>
 <body>
-  <h1>Panel: Supervisores</h1>
-  <p>Aquí iría la funcionalidad exclusiva de supervisores.</p>
-  <a href="/dashboard">← Volver al dashboard</a>
-  <script src="./main.js"></script>
+  <main class="wrap">
+    <h1>👤 Supervisor → 🏥 Servicio</h1>
+
+    <section class="card">
+      <label for="supervisorInput">Supervisor</label>
+      <input id="supervisorInput" type="text" list="listaSupervisores" placeholder="Escribe el nombre del supervisor…" autocomplete="off" />
+      <datalist id="listaSupervisores"></datalist>
+
+      <label for="servicioSelect" style="margin-top:12px;">Servicio</label>
+      <select id="servicioSelect" disabled>
+        <option value="">Elegí un servicio…</option>
+      </select>
+
+      <div class="row mt">
+        <button id="btnIr" class="primary">Ir al catálogo</button>
+        <button id="btnLimpiar" class="ghost">Limpiar</button>
+      </div>
+
+      <p class="hint">Al entrar al catálogo se aplicará un filtro con los insumos habilitados para ese servicio.</p>
+    </section>
+  </main>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const input = $('#supervisorInput');
+    const lista = $('#listaSupervisores');
+    const sel   = $('#servicioSelect');
+    const btnIr = $('#btnIr');
+    const btnLimpiar = $('#btnLimpiar');
+
+    let DATA = null; // JSON completo
+    let mapaSup = new Map(); // nombre → objetoSupervisor
+
+    // Carga JSON (intenta embebido primero, luego archivo)
+    async function loadJSON() {
+      const embedded = document.getElementById('supervisores-data');
+      if (embedded) {
+        return JSON.parse(embedded.textContent);
+      }
+      const res = await fetch('/data/supervisores.json');
+      if (!res.ok) throw new Error('No pude cargar supervisores.json');
+      return await res.json();
+    }
+
+    function poblarSupervisores() {
+      lista.innerHTML = '';
+      mapaSup.clear();
+      for (const sup of (DATA.supervisores || [])) {
+        mapaSup.set(sup.nombre, sup);
+        const opt = document.createElement('option');
+        opt.value = sup.nombre;
+        lista.appendChild(opt);
+      }
+    }
+
+    function poblarServicios(nombre) {
+      sel.innerHTML = '<option value="">Elegí un servicio…</option>';
+      sel.disabled = true;
+
+      const sup = mapaSup.get(nombre);
+      if (!sup) return;
+
+      for (const s of (sup.servicios || [])) {
+        const opt = document.createElement('option');
+        opt.value = s.id; // este ID se usa en el catálogo
+        opt.textContent = s.nombre || s.id;
+        sel.appendChild(opt);
+      }
+      sel.disabled = (sup.servicios || []).length === 0;
+      if ((sup.servicios || []).length === 1) sel.selectedIndex = 1;
+    }
+
+    input.addEventListener('input', () => poblarServicios(input.value));
+
+    btnLimpiar.addEventListener('click', (e) => {
+      e.preventDefault();
+      input.value = '';
+      poblarServicios('');
+    });
+
+    btnIr.addEventListener('click', (e) => {
+      e.preventDefault();
+      const nombre = input.value.trim();
+      const servicioId = sel.value;
+      if (!mapaSup.has(nombre)) { alert('Elegí un supervisor válido.'); return; }
+      if (!servicioId) { alert('Elegí un servicio.'); return; }
+
+      const url = `/index.html?service=${encodeURIComponent(servicioId)}&supervisor=${encodeURIComponent(nombre)}`;
+      window.location.href = url;
+    });
+
+    (async () => {
+      try {
+        DATA = await loadJSON();
+        poblarSupervisores();
+      } catch (e) {
+        console.error(e);
+        alert('No pude cargar supervisores.json');
+      }
+    })();
+  </script>
 </body>
 </html>

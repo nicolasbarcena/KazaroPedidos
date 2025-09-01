@@ -1,344 +1,388 @@
-// EmailJS 
+/* ---------------------------------------------------------
+   Catálogo + Remito + Email + Filtro por Servicio (JSON)
+   --------------------------------------------------------- */
+
+/* ============= EmailJS (opcional) ============= */
 const EMAILJS_PUBLIC_KEY = "g94YTgSjLp2km1bcS";
-const SERVICE_ID = "service_40ttmon";
+const SERVICE_ID_EMAILJS = "service_40ttmon";
 const TEMPLATE_ID = "template_462n4v4";
 
-emailjs.init(EMAILJS_PUBLIC_KEY);
+if (typeof emailjs !== "undefined") {
+  try { emailjs.init(EMAILJS_PUBLIC_KEY); } catch {}
+}
 
-// Variables
+/* ============= Estado de la App ============= */
 let carrito = [];
 let remitoActual = null;
 
-
-let paginaActual = 1;
 const productosPorPagina = 15;
-
-// URL  de Google Sheets como CSV
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/1HKNgbMYLHPpw8c9y7D9ENdWsTy2CPTFjhENiTSlIkMc/export?format=csv&gid=0";
-
 let productos = [];
 
-// Convierte CSV a array de objetos
-function csvToJSON(csvText) {
-  const rows = csvText.trim().split("\n").map(r => r.split(","));
-  const headers = rows.shift().map(h => h.trim().toLowerCase()); 
-  return rows.map(r =>
-    headers.reduce((obj, h, i) => {
-      obj[h] = r[i] ? r[i].trim() : "";
-      return obj;
-    }, {})
-  );
+/* ============= Origen de datos ============= */
+// Google Sheet (CSV)
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1HKNgbMYLHPpw8c9y7D9ENdWsTy2CPTFjhENiTSlIkMc/export?format=csv&gid=0";
+// Políticas por servicio/supervisor
+const SERVICE_DATA_URL = "/data/supervisores.json";
+
+/* ============= Parámetros de URL ============= */
+const urlParams = new URLSearchParams(location.search);
+const SERVICE_ID = urlParams.get("service");         // ej: MS-OLIVA
+const SUPERVISOR_NAME = urlParams.get("supervisor"); // opcional
+
+/* ================= Utilidades ================= */
+const $ = (q) => document.querySelector(q);
+const toNum = (x, d=0) => { const n = Number(x); return Number.isFinite(n) ? n : d; };
+const toInt = (x, d=0) => { const n = parseInt(x, 10); return Number.isFinite(n) ? n : d; };
+
+/* ========== Cargar política (supervisores.json) ========== */
+async function loadServicePolicy(serviceId) {
+  if (!serviceId) return { ok:false, name:null, filter: (p)=>true, expectedCodes: new Set(), mode:"allow" };
+
+  let data;
+  // 1) embebido (por si lo pegás en el HTML)
+  const embedded = document.getElementById('supervisores-data');
+  if (embedded) {
+    try { data = JSON.parse(embedded.textContent); } catch {}
+  }
+  // 2) archivo
+  if (!data) {
+    const res = await fetch(SERVICE_DATA_URL);
+    if (!res.ok) throw new Error("No pude cargar supervisores.json");
+    data = await res.json();
+  }
+
+  // Buscar servicio
+  let servicio = null, supervisor = null;
+  for (const sup of data.supervisores || []) {
+    const sv = (sup.servicios || []).find(s => s.id === serviceId);
+    if (sv) { servicio = sv; supervisor = sup; break; }
+  }
+  if (!servicio) {
+    console.warn("Servicio no encontrado en JSON:", serviceId);
+    return { ok:false, name:null, filter: (p)=>true, expectedCodes: new Set(), mode:"allow" };
+  }
+
+  const mode = (servicio.modo || "allow").toLowerCase(); // "allow" o "deny"
+  const porCodigos    = new Set((servicio.insumos?.porCodigos || []).map(String));
+  const porCategorias = new Set((servicio.insumos?.porCategorias || []).map(String));
+
+  // Compilar función filtro
+  let filter;
+  if (mode === "deny") {
+    filter = (p) => {
+      const byCode = porCodigos.size    ? porCodigos.has(String(p.code)) : false;
+      const byCat  = porCategorias.size ? porCategorias.has(String(p.category)) : false;
+      return !(byCode || byCat);
+    };
+  } else {
+    if (porCodigos.size === 0 && porCategorias.size === 0) {
+      filter = (p) => true;
+    } else {
+      filter = (p) => {
+        const byCode = porCodigos.size    ? porCodigos.has(String(p.code)) : false;
+        const byCat  = porCategorias.size ? porCategorias.has(String(p.category)) : false;
+        return byCode || byCat;
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    name: servicio.nombre || serviceId,
+    supervisor: supervisor?.nombre || SUPERVISOR_NAME || null,
+    filter,
+    expectedCodes: porCodigos,
+    mode
+  };
 }
 
-// Cargar productos desde Google Sheets
+/* ========== Cargar productos de la hoja + aplicar política ========== */
 async function cargarProductos() {
+  // 1) Cargar política
+  const policy = await loadServicePolicy(SERVICE_ID).catch(err => {
+    console.error(err);
+    alert('No pude cargar supervisores.json');
+    return { ok:false, name:null, filter:(p)=>true, expectedCodes:new Set(), mode:"allow" };
+  });
+
+  // 2) Leer hoja (CSV)
+  let all = [];
   try {
     const res = await fetch(SHEET_URL);
     const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
 
-    const data = Papa.parse(text, {
-      header: true,   
-      skipEmptyLines: true
-    });
-
-    productos = data.data.map(p => ({
-      code: p.code,
-      description: p.description,
-      category: p.category,
-      price: parseFloat(p.price || 0),
-      stock: parseInt(p.stock || 0)
+    all = (parsed.data || []).map(p => ({
+      code: (p.code || "").trim(),
+      description: (p.description || "").trim(),
+      category: (p.category || "").trim(),
+      price: toNum(p.price || 0, 0),
+      stock: toInt(p.stock || 0, 0)
     }));
-
-    console.log("Productos cargados desde Sheets:", productos);
   } catch (err) {
     console.error("Error cargando productos desde Google Sheets:", err);
+    alert("No se pudieron cargar los productos.");
   }
+
+  // 3) Aplicar filtro de política
+  productos = all.filter(policy.filter);
+
+  // 4) Diagnóstico: códigos listados pero no presentes en la hoja
+  if (policy.ok && policy.expectedCodes.size) {
+    const codesInSheet = new Set(all.map(p => String(p.code)));
+    const faltantes = [...policy.expectedCodes].filter(c => !codesInSheet.has(c));
+    if (faltantes.length) {
+      console.warn("Códigos listados en JSON pero NO presentes en la hoja:", faltantes);
+    }
+  }
+
+  // 5) Banner opcional
+  const info = $("#filtroInfo");
+  if (policy.ok && info) {
+    info.innerHTML = `
+      <div style="padding:10px 12px; border-radius:10px; background:#f1f5ff; color:#223; margin:12px 0;">
+        Filtrado por servicio: <strong>${policy.name}</strong>
+        ${policy.supervisor ? ` (Supervisor: ${policy.supervisor})` : ""}
+        — <em>modo ${policy.mode === "deny" ? "lista negra" : "lista blanca"}</em>.
+        <br>Productos visibles: <strong>${productos.length}</strong>.
+      </div>
+    `;
+  }
+
+  console.log("Productos totales en hoja:", all.length, " | visibles:", productos.length);
 }
 
-// Mostrar productos filtrados por categoria
+/* =================== Catálogo =================== */
 function mostrarProductos(categoria, pagina = 1) {
-  const contenedor = document.getElementById("productos");
-  contenedor.innerHTML = "";
+  const cont = $("#productos");
+  if (!cont) return;
+  cont.innerHTML = "";
 
   const filtrados = productos.filter(p => p.category === categoria);
-
   if (filtrados.length === 0) {
-    contenedor.innerHTML = "<p>No hay productos en esta categoría.</p>";
+    cont.innerHTML = "<p>No hay productos en esta categoría.</p>";
     return;
   }
 
-  // Paginacion
   const inicio = (pagina - 1) * productosPorPagina;
   const fin = inicio + productosPorPagina;
-  const paginaProductos = filtrados.slice(inicio, fin);
+  const page = filtrados.slice(inicio, fin);
 
-  // Mostrar productos
-  paginaProductos.forEach(prod => {
+  page.forEach(prod => {
     const div = document.createElement("div");
     div.classList.add("producto");
-
     div.innerHTML = `
       <h3>${prod.description}</h3>
-      <p>Código: ${prod.code}</p>
-      <p>Precio: $${prod.price}</p>
-      <button id="btn-${prod.code}" 
-      ${prod.stock <= 0 ? "disabled" : ""} 
-      onclick="agregarAlCarrito('${prod.code}','${prod.description}',${prod.price})">
-      Agregar
+      <p><strong>Código:</strong> ${prod.code}</p>
+      <p><strong>Precio:</strong> $${toNum(prod.price).toFixed(2)}</p>
+      <p>Stock: <span id="stock-${prod.code}">${toInt(prod.stock)}</span></p>
+      <button id="btn-${prod.code}" ${prod.stock <= 0 ? "disabled" : ""}
+        onclick="agregarAlCarrito('${prod.code}','${prod.description}',${toNum(prod.price)})">
+        Agregar
       </button>
-      `;
-      
-      contenedor.appendChild(div);
-    });
-  
-    
-  // Controles de paginacion
-  const paginacion = document.createElement("div"); 
-  paginacion.classList.add("paginacion");
+    `;
+    cont.appendChild(div);
+  });
 
+  const pag = document.createElement("div");
+  pag.classList.add("paginacion");
   if (pagina > 1) {
-    const btnPrev = document.createElement("button");
-    btnPrev.textContent = "⬅ Anterior";
-    btnPrev.onclick = () => mostrarProductos(categoria, pagina - 1);
-    paginacion.appendChild(btnPrev);
+    const prev = document.createElement("button");
+    prev.textContent = "⬅ Anterior";
+    prev.onclick = () => mostrarProductos(categoria, pagina - 1);
+    pag.appendChild(prev);
   }
-
   if (fin < filtrados.length) {
-    const btnNext = document.createElement("button");
-    btnNext.textContent = "Siguiente ➡";
-    btnNext.onclick = () => mostrarProductos(categoria, pagina + 1);
-    paginacion.appendChild(btnNext);
+    const next = document.createElement("button");
+    next.textContent = "Siguiente ➡";
+    next.onclick = () => mostrarProductos(categoria, pagina + 1);
+    pag.appendChild(next);
   }
-
-  contenedor.appendChild(paginacion);
+  cont.appendChild(pag);
 }
 
-// Agregar al carrito según stock
-function agregarAlCarrito(code, description, price) {
+/* =================== Carrito =================== */
+window.agregarAlCarrito = function (code, description, price) {
   const producto = productos.find(p => p.code === code);
-
-  //  Validación de stock
   if (!producto || producto.stock <= 0) {
     alert("Este producto no tiene stock disponible.");
     return;
-  }
-
-  let existente = carrito.find(p => p.code === code);
-
-  if (existente) {
-    if (existente.cantidad < producto.stock) {
-      existente.cantidad++;
-      existente.subtotal = existente.cantidad * existente.price;
+    }
+  let item = carrito.find(p => p.code === code);
+  if (item) {
+    if (item.cantidad < producto.stock) {
+      item.cantidad++;
+      item.subtotal = item.cantidad * item.price;
       producto.stock--;
     } else {
       alert(`Solo quedan ${producto.stock} unidades disponibles.`);
     }
   } else {
-    carrito.push({
-      code,
-      description,
-      price,
-      cantidad: 1,
-      subtotal: price
-    });
-    producto.stock--; 
+    carrito.push({ code, description, price, cantidad: 1, subtotal: price });
+    producto.stock--;
   }
 
-  // Actualizar stock en pantalla
   const stockSpan = document.getElementById(`stock-${code}`);
   if (stockSpan) stockSpan.textContent = producto.stock;
 
-  // Si llega a 0 - desactivar boton
-  if (producto.stock <= 0) {
-    const btn = document.getElementById(`btn-${code}`);
-    if (btn) btn.disabled = true;
-  }
+  const btn = document.getElementById(`btn-${code}`);
+  if (btn && producto.stock <= 0) btn.disabled = true;
 
   renderCarrito();
-}
+};
 
-
-// Renderizar carrito
 function renderCarrito() {
   const tbody = document.getElementById("carrito-body");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  carrito.forEach((item, index) => {
+  carrito.forEach((it, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${item.code}</td>
-      <td>${item.description}</td>
-      <td>
-        <input type="number" min="1" value="${item.cantidad}" 
-               onchange="cambiarCantidad(${index}, this.value)">
-      </td>
-      <td>$${item.price}</td>
-      <td>$${item.subtotal.toFixed(2)}</td>
-      <td><button onclick="eliminarDelCarrito(${index})">❌</button></td>
+      <td>${it.code}</td>
+      <td>${it.description}</td>
+      <td><input type="number" min="1" value="${it.cantidad}" onchange="cambiarCantidad(${i}, this.value)"></td>
+      <td>$${toNum(it.price).toFixed(2)}</td>
+      <td>$${toNum(it.subtotal).toFixed(2)}</td>
+      <td><button onclick="eliminarDelCarrito(${i})">❌</button></td>
     `;
     tbody.appendChild(tr);
   });
 
-  const total = carrito.reduce((sum, i) => sum + i.subtotal, 0);
-  document.getElementById("total").textContent = total.toFixed(2);
+  const total = carrito.reduce((s, it) => s + it.subtotal, 0);
+  const totalEl = document.getElementById("total");
+  if (totalEl) totalEl.textContent = toNum(total).toFixed(2);
 }
 
-// Cambiar cantidad en carrito
-function cambiarCantidad(index, cantidad) {
-  cantidad = parseInt(cantidad);
-  const producto = productos.find(p => p.code === carrito[index].code);
+window.cambiarCantidad = function (i, cant) {
+  cant = toInt(cant, 1);
+  const prod = productos.find(p => p.code === carrito[i].code);
+  if (!prod) return;
 
-  if (cantidad > producto.stock + carrito[index].cantidad) {
-    alert(`Stock insuficiente. Solo quedan ${producto.stock + carrito[index].cantidad} unidades.`);
-    cantidad = producto.stock + carrito[index].cantidad;
+  if (cant > prod.stock + carrito[i].cantidad) {
+    alert(`Stock insuficiente. Solo quedan ${prod.stock + carrito[i].cantidad} unidades.`);
+    cant = prod.stock + carrito[i].cantidad;
   }
 
-  // Ajustar stock disponible
-  const diferencia = cantidad - carrito[index].cantidad;
-  producto.stock -= diferencia;
+  const dif = cant - carrito[i].cantidad;
+  prod.stock -= dif;
 
-  carrito[index].cantidad = cantidad;
-  carrito[index].subtotal = carrito[index].cantidad * carrito[index].price;
+  carrito[i].cantidad = cant;
+  carrito[i].subtotal = cant * carrito[i].price;
 
-  // Actualizar stock en catalogo
-  const stockSpan = document.getElementById(`stock-${producto.code}`);
-  if (stockSpan) stockSpan.textContent = producto.stock;
-
-  if (producto.stock <= 0) {
-    const btn = document.getElementById(`btn-${producto.code}`);
-    if (btn) btn.disabled = true;
-  }
+  const stockSpan = document.getElementById(`stock-${prod.code}`);
+  if (stockSpan) stockSpan.textContent = prod.stock;
+  const btn = document.getElementById(`btn-${prod.code}`);
+  if (btn) btn.disabled = prod.stock <= 0;
 
   renderCarrito();
-}
+};
 
-// Eliminar producto del carrito
-function eliminarDelCarrito(index) {
-  const item = carrito[index];
-  const producto = productos.find(p => p.code === item.code);
+window.eliminarDelCarrito = function (i) {
+  const it = carrito[i];
+  const prod = productos.find(p => p.code === it.code);
+  if (!prod) return;
 
-  // devolver stock al catálogo
-  producto.stock += item.cantidad;
+  prod.stock += it.cantidad;
 
-  const stockSpan = document.getElementById(`stock-${producto.code}`);
-  if (stockSpan) stockSpan.textContent = producto.stock;
-
-  // reactivar boton si vuelve stock
-  const btn = document.getElementById(`btn-${producto.code}`);
+  const stockSpan = document.getElementById(`stock-${prod.code}`);
+  if (stockSpan) stockSpan.textContent = prod.stock;
+  const btn = document.getElementById(`btn-${prod.code}`);
   if (btn) btn.disabled = false;
 
-  carrito.splice(index, 1);
+  carrito.splice(i, 1);
   renderCarrito();
-}
+};
 
-// Remito
+/* ================= Remito + Envío ================= */
 function generarNumeroRemito() {
-  const fecha = new Date();
-  const dd = String(fecha.getDate()).padStart(2, "0");
-  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
-  const yy = fecha.getFullYear().toString().slice(-2);
-  const hh = String(fecha.getHours()).padStart(2, "0");
-  const mi = String(fecha.getMinutes()).padStart(2, "0");
-  const ss = String(fecha.getSeconds()).padStart(2, "0");
-  return `REM-${dd}${mm}${yy}-${hh}${mi}${ss}`;
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `REM-${pad(d.getDate())}${pad(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 async function finalizarPedido() {
-  const cliente = document.getElementById("cliente").value.trim();
-  if (!cliente) {
-    alert("Ingrese nombre y apellido.");
-    return;
-  }
-  if (carrito.length === 0) {
-    alert("El carrito está vacío.");
-    return;
-  }
-
-  const numeroRemito = generarNumeroRemito();
-  const total = carrito.reduce((sum, i) => sum + i.subtotal, 0);
+  const cliente = document.getElementById("cliente")?.value.trim();
+  if (!cliente) return alert("Ingrese nombre y apellido.");
+  if (carrito.length === 0) return alert("El carrito está vacío.");
 
   remitoActual = {
-    numero: numeroRemito,
+    numero: generarNumeroRemito(),
     cliente,
     fecha: new Date().toLocaleString(),
     items: [...carrito],
-    total
+    total: carrito.reduce((s, i) => s + i.subtotal, 0)
   };
 
   mostrarRemito(remitoActual);
 
-  // Google Sheets
-try {
+  try {
     const res = await fetch("https://script.google.com/macros/s/AKfycbym93C9owPRg7Qh-f2SO83qfv_cEHoj0J87VUE6B3AKrXgMFkMVihtE5Q-SPrNXksTVDw/exec", {
       method: "POST",
       body: JSON.stringify({ items: carrito }),
       headers: { "Content-Type": "application/json" }
     });
-
     const data = await res.json();
-
     if (data.success) {
-      console.log("Stock actualizado en Sheets:", data.updated);
-
-      // 🔹 Refrescar el stock en la UI
       data.updated.forEach(u => {
         const stockSpan = document.getElementById(`stock-${u.code}`);
         if (stockSpan) stockSpan.textContent = u.stock;
-
         const btn = document.getElementById(`btn-${u.code}`);
         if (btn && u.stock <= 0) btn.disabled = true;
       });
-    } else {
-      console.error("Error en respuesta de Apps Script:", data.error);
     }
-
   } catch (err) {
     console.error("Error actualizando stock:", err);
   }
 }
 
-function mostrarRemito(remito) {
+function mostrarRemito(r) {
   const div = document.getElementById("remito");
+  const sec = document.getElementById("remito-section");
+  if (!div || !sec) return;
+
   div.innerHTML = `
-    <p><strong>Remito N°:</strong> ${remito.numero}</p>
-    <p><strong>Cliente:</strong> ${remito.cliente}</p>
-    <p><strong>Fecha:</strong> ${remito.fecha}</p>
+    <p><strong>Remito N°:</strong> ${r.numero}</p>
+    <p><strong>Cliente:</strong> ${r.cliente}</p>
+    <p><strong>Fecha:</strong> ${r.fecha}</p>
     <table>
       <thead>
         <tr><th>Código</th><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr>
       </thead>
       <tbody>
-        ${remito.items.map(i =>
-          `<tr><td>${i.code}</td><td>${i.description}</td><td>${i.cantidad}</td><td>$${i.price}</td><td>$${i.subtotal.toFixed(2)}</td></tr>`
-        ).join("")}
+        ${r.items.map(i => `
+          <tr>
+            <td>${i.code}</td>
+            <td>${i.description}</td>
+            <td>${i.cantidad}</td>
+            <td>$${toNum(i.price).toFixed(2)}</td>
+            <td>$${toNum(i.subtotal).toFixed(2)}</td>
+          </tr>`).join("")}
       </tbody>
     </table>
-    <h3>Total: $${remito.total.toFixed(2)}</h3>
+    <h3>Total: $${toNum(r.total).toFixed(2)}</h3>
   `;
-
-  document.getElementById("remito-section").style.display = "block";
+  sec.style.display = "block";
 }
 
-// Enviar por mail
 async function enviarEmail() {
   if (!remitoActual) return alert("No hay remito para enviar.");
 
   const detalleHTML = remitoActual.items.map(i => `
-  <tr>
-    <td style="border:1px solid #ddd; padding:6px;">${i.code}</td>
-    <td style="border:1px solid #ddd; padding:6px;">${i.description}</td>
-    <td style="border:1px solid #ddd; padding:6px; text-align:center;">${i.cantidad}</td>
-    <td style="border:1px solid #ddd; padding:6px; text-align:right;">$${i.price.toFixed(2)}</td>
-    <td style="border:1px solid #ddd; padding:6px; text-align:right;">$${i.subtotal.toFixed(2)}</td>
-  </tr>
-   `).join("");
+    <tr>
+      <td style="border:1px solid #ddd; padding:6px;">${i.code}</td>
+      <td style="border:1px solid #ddd; padding:6px;">${i.description}</td>
+      <td style="border:1px solid #ddd; padding:6px; text-align:center;">${i.cantidad}</td>
+      <td style="border:1px solid #ddd; padding:6px; text-align:right;">$${toNum(i.price).toFixed(2)}</td>
+      <td style="border:1px solid #ddd; padding:6px; text-align:right;">$${toNum(i.subtotal).toFixed(2)}</td>
+    </tr>`).join("");
 
   try {
-    await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+    await emailjs.send(SERVICE_ID_EMAILJS, TEMPLATE_ID, {
       numero: remitoActual.numero,
       cliente: remitoActual.cliente,
       fecha: remitoActual.fecha,
-      total: remitoActual.total.toFixed(2),
+      total: toNum(remitoActual.total).toFixed(2),
       detalle: detalleHTML
     });
     alert("Remito enviado con éxito.");
@@ -348,9 +392,9 @@ async function enviarEmail() {
   }
 }
 
-// Eventos
-document.getElementById("finalizar").addEventListener("click", finalizarPedido);
-document.getElementById("enviar").addEventListener("click", enviarEmail);
-
-// Inicializacion
-cargarProductos();
+/* =============== Eventos de inicio =============== */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("finalizar")?.addEventListener("click", finalizarPedido);
+  document.getElementById("enviar")?.addEventListener("click", enviarEmail);
+  cargarProductos(); // <-- Lee hoja y JSON, y luego filtra según la política
+});

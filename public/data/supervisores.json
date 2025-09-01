@@ -1,0 +1,32 @@
+{
+  "supervisores": [
+    {
+      "nombre": "Ricardo Ricarde",
+      "servicios": [
+        {
+          "id": "MS-OLIVA",
+          "nombre": "MS - HOSPITAL ZONAL DE OLIVA",
+          "modo": "allow",
+          "insumos": {
+            "porCodigos": ["008","024","055"],
+            "porCategorias": ["bolsas","inflamables"]
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "Juan Pérez",
+      "servicios": [
+        {
+          "id": "MS-OTRO",
+          "nombre": "MS - OTRO HOSPITAL",
+          "modo": "deny",
+          "insumos": {
+            "porCodigos": ["999"],            
+            "porCategorias": ["inflamables"]  
+          }
+        }
+      ]
+    }
+  ]
+}
