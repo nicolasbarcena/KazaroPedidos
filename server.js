@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // server.js — Render (free) + Postgres (Neon) + cookie-session + no-cache en dev
 const path = require('path');
 const fs = require('fs');
