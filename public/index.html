@@ -93,7 +93,6 @@
       }
     }
 
-    // Pre-cargar recordados en modo login
     (function preloadRemembered(){
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -107,7 +106,6 @@
       } catch {}
     })();
 
-    // Mostrar/ocultar passwords
     function toggleType(inputId){
       const input = document.getElementById(inputId);
       input.type = (input.type === 'password') ? 'text' : 'password';
@@ -116,8 +114,7 @@
     $('#toggleNewPw').addEventListener('click', () => toggleType('newPass'));
     $('#toggleNewPw2').addEventListener('click', () => toggleType('newPass2'));
 
-    // Conmutador de modo
-    let mode = 'login'; // 'login' | 'register'
+    let mode = 'login'; 
     function setMode(m){
       mode = m;
       clearError(); clearOk();
@@ -145,7 +142,6 @@
     $('#btnModeLogin').addEventListener('click', () => setMode('login'));
     $('#btnModeReg').addEventListener('click', () => setMode('register'));
 
-    // Envío unificado
     const form = $('#authForm');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -169,7 +165,6 @@
 
           rememberMaybe(username, password);
 
-          // Redirección post-login (ajusta si querés otra)
           window.location.href = '/dashboard.html';
         }catch(err){
           showError('No se pudo conectar con el servidor.');
