@@ -9,112 +9,212 @@
 <body>
   <main class="wrap">
     <section class="card">
-      <h1>🔐 Acceso</h1>
-      <p class="subtitle">Ingresa con tu usuario y contraseña asignados.</p>
+      <div class="row" style="justify-content:center; gap:8px; margin-bottom:12px;">
+        <button id="btnModeLogin"   class="ghost small" type="button">Iniciar sesión</button>
+        <button id="btnModeReg"     class="ghost small" type="button">Crear cuenta</button>
+      </div>
 
-      <form id="loginForm" autocomplete="on" novalidate>
-        <label for="user">Usuario</label>
-        <input id="user" name="username" type="text" required autofocus placeholder="usuario" />
+      <h1 id="title">🔐 Acceso</h1>
+      <p id="subtitle" class="subtitle">Ingresa con tu usuario y contraseña asignados.</p>
 
-        <label for="pass">Contraseña</label>
-        <div class="pw-row">
-          <input id="pass" name="password" type="password" required placeholder="••••••••" />
-          <button type="button" id="togglePw" class="ghost small" aria-label="Mostrar u ocultar contraseña">Ver</button>
+      <!-- FORMULARIO UNIFICADO (se alternan secciones) -->
+      <form id="authForm" autocomplete="on" novalidate>
+
+        <!-- campos comunes / login -->
+        <div id="loginBlock">
+          <label for="user">Usuario</label>
+          <input id="user" name="username" type="text" required placeholder="usuario" />
+
+          <label for="pass">Contraseña</label>
+          <div class="pw-row">
+            <input id="pass" name="password" type="password" required placeholder="••••••••" />
+            <button type="button" id="togglePw" class="ghost small" aria-label="Mostrar u ocultar contraseña">Ver</button>
+          </div>
+
+          <div class="row">
+            <label class="chk">
+              <input id="remember" type="checkbox" />
+              <span>Recordarme</span>
+            </label>
+
+            <button id="submitBtnLogin" class="primary" type="submit">Ingresar</button>
+          </div>
         </div>
 
-        <div class="row">
-          <label class="chk">
-            <input id="remember" type="checkbox" />
-            <span>Recordarme</span>
-          </label>
+        <!-- registro -->
+        <div id="registerBlock" hidden>
+          <label for="newUser">Usuario</label>
+          <input id="newUser" name="newUser" type="text" required placeholder="usuario nuevo" />
 
-          <button id="submitBtn" class="primary" type="submit">Ingresar</button>
+          <label for="newPass">Contraseña</label>
+          <div class="pw-row">
+            <input id="newPass" name="newPass" type="password" required placeholder="Mínimo 6 caracteres" minlength="6" />
+            <button type="button" id="toggleNewPw" class="ghost small" aria-label="Mostrar u ocultar contraseña">Ver</button>
+          </div>
+
+          <label for="newPass2">Repetí la contraseña</label>
+          <div class="pw-row">
+            <input id="newPass2" name="newPass2" type="password" required placeholder="Repetir contraseña" minlength="6" />
+            <button type="button" id="toggleNewPw2" class="ghost small" aria-label="Mostrar u ocultar contraseña">Ver</button>
+          </div>
+
+          <div class="row">
+            <span></span>
+            <button id="submitBtnReg" class="primary" type="submit">Crear cuenta</button>
+          </div>
         </div>
 
         <p id="error" class="error" role="alert" hidden></p>
+        <p id="okMsg" class="error" style="border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08);color:#bbf7d0;" hidden></p>
       </form>
 
-      <p class="help">¿Problemas para entrar? Contactá al administrador para restablecer tu clave.</p>
+      <p class="help" id="helpText">¿Problemas para entrar? Contactá al administrador para restablecer tu clave.</p>
     </section>
   </main>
 
   <script>
     const STORAGE_KEY = 'loginapp_credentials';
 
-    // Cargar recordatorio si existe
+    // --- util ---
+    const $ = s => document.querySelector(s);
+    const err  = $('#error');
+    const okMsg = $('#okMsg');
+
+    function showError(msg){ err.textContent = msg; err.hidden = false; }
+    function clearError(){ err.hidden = true; }
+    function showOk(msg){ okMsg.textContent = msg; okMsg.hidden = false; }
+    function clearOk(){ okMsg.hidden = true; }
+
+    function rememberMaybe(username, password){
+      if ($('#remember').checked) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+
+    // Pre-cargar recordados en modo login
     (function preloadRemembered(){
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         if (saved.username) {
-          document.getElementById('user').value = saved.username || '';
+          $('#user').value = saved.username || '';
           if (saved.password) {
-            document.getElementById('pass').value = saved.password || '';
-            document.getElementById('remember').checked = true;
+            $('#pass').value = saved.password || '';
+            $('#remember').checked = true;
           }
         }
       } catch {}
     })();
 
-    // Mostrar/ocultar password
-    document.getElementById('togglePw').addEventListener('click', () => {
-      const input = document.getElementById('pass');
+    // Mostrar/ocultar passwords
+    function toggleType(inputId){
+      const input = document.getElementById(inputId);
       input.type = (input.type === 'password') ? 'text' : 'password';
-    });
+    }
+    $('#togglePw').addEventListener('click', () => toggleType('pass'));
+    $('#toggleNewPw').addEventListener('click', () => toggleType('newPass'));
+    $('#toggleNewPw2').addEventListener('click', () => toggleType('newPass2'));
 
-    // Enviar login
-    const form = document.getElementById('loginForm');
-    const btn  = document.getElementById('submitBtn');
-    const err  = document.getElementById('error');
+    // Conmutador de modo
+    let mode = 'login'; // 'login' | 'register'
+    function setMode(m){
+      mode = m;
+      clearError(); clearOk();
 
+      if (mode === 'login'){
+        $('#title').textContent = '🔐 Acceso';
+        $('#subtitle').textContent = 'Ingresa con tu usuario y contraseña asignados.';
+        $('#loginBlock').hidden = false;
+        $('#registerBlock').hidden = true;
+        $('#helpText').style.display = 'block';
+        $('#btnModeLogin').classList.add('primary');
+        $('#btnModeReg').classList.remove('primary');
+        $('#user').focus();
+      } else {
+        $('#title').textContent = ' Crear cuenta';
+        $('#subtitle').textContent = 'Crea tu usuario para ingresar a la plataforma.';
+        $('#loginBlock').hidden = true;
+        $('#registerBlock').hidden = false;
+        $('#helpText').style.display = 'none';
+        $('#btnModeReg').classList.add('primary');
+        $('#btnModeLogin').classList.remove('primary');
+        $('#newUser').focus();
+      }
+    }
+    $('#btnModeLogin').addEventListener('click', () => setMode('login'));
+    $('#btnModeReg').addEventListener('click', () => setMode('register'));
+
+    // Envío unificado
+    const form = $('#authForm');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      err.hidden = true;
-      btn.disabled = true;
-      btn.textContent = 'Ingresando…';
+      clearError(); clearOk();
 
-      const username = document.getElementById('user').value.trim();
-      const password = document.getElementById('pass').value;
+      if (mode === 'login'){
+        const btn = $('#submitBtnLogin');
+        btn.disabled = true; btn.textContent = 'Ingresando…';
 
-      if (!username || !password) {
-        showError('Completá usuario y contraseña.'); resetBtn(); return;
-      }
+        const username = $('#user').value.trim();
+        const password = $('#pass').value;
+        if (!username || !password){ showError('Completá usuario y contraseña.'); btn.disabled=false; btn.textContent='Ingresar'; return; }
 
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
+        try{
+          const res = await fetch('/api/login', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json();
+          if (!data.ok){ showError(data.error || 'Usuario o contraseña inválidos.'); btn.disabled=false; btn.textContent='Ingresar'; return; }
 
-        if (!data.ok) {
-          showError(data.error || 'Usuario o contraseña inválidos.');
-          resetBtn(); return;
+          rememberMaybe(username, password);
+
+          // Redirección post-login (ajusta si querés otra)
+          window.location.href = '/dashboard.html';
+        }catch(err){
+          showError('No se pudo conectar con el servidor.');
+          btn.disabled=false; btn.textContent='Ingresar';
         }
 
-        // Recordar credenciales (opcional y local)
-        if (document.getElementById('remember').checked) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
+      } else {
+        const btn = $('#submitBtnReg');
+        btn.disabled = true; btn.textContent = 'Creando…';
 
-        // Redirigir al panel (ajústalo si querés otra página)
-        window.location.href = '/dashboard.html';
-      } catch (e2) {
-        showError('No se pudo conectar con el servidor.');
-        resetBtn();
+        const username = $('#newUser').value.trim();
+        const pass1 = $('#newPass').value;
+        const pass2 = $('#newPass2').value;
+
+        if (!username || !pass1 || !pass2){ showError('Completá todos los campos.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
+        if (pass1.length < 6){ showError('La contraseña debe tener al menos 6 caracteres.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
+        if (pass1 !== pass2){ showError('Las contraseñas no coinciden.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
+
+        try{
+          const res = await fetch('/api/register', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ username, password: pass1 })
+          });
+          const data = await res.json();
+          if (!data.ok){ showError(data.error || 'No se pudo crear la cuenta.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
+
+          // OK → volver a login y pre-cargar el usuario
+          showOk('Cuenta creada. Ahora iniciá sesión.');
+          $('#user').value = username;
+          $('#pass').value = '';
+          setMode('login');
+        }catch(err){
+          showError('No se pudo conectar con el servidor.');
+        } finally {
+          btn.disabled=false; btn.textContent='Crear cuenta';
+        }
       }
     });
 
-    function showError(msg) {
-      err.textContent = msg;
-      err.hidden = false;
-    }
-    function resetBtn() {
-      btn.disabled = false;
-      btn.textContent = 'Ingresar';
-    }
+    // Modo inicial
+    setMode('login');
+
+    // Tip: si querés que vaya a catalogosupervisores.html al iniciar sesión:
+    // cambia la línea de redirect a:
+    // window.location.href = '/catalogosupervisores.html';
   </script>
 </body>
 </html>
