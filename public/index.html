@@ -1,72 +1,120 @@
-<!-- public/catalogo.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App de Pedidos</title>
-  <link rel="stylesheet" href="/style.css">
-  <meta name="theme-color" content="#3498db">
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acceso — Kazaró</title>
+  <link rel="stylesheet" href="/login.css">
 </head>
 <body>
-  <div class="container">
-    <h1>📦 KAZARÓ</h1>
+  <main class="wrap">
+    <section class="card">
+      <h1>🔐 Acceso</h1>
+      <p class="subtitle">Ingresa con tu usuario y contraseña asignados.</p>
 
-    <!-- Banner del filtro aplicado -->
-    <div id="filtroInfo"></div>
+      <form id="loginForm" autocomplete="on" novalidate>
+        <label for="user">Usuario</label>
+        <input id="user" name="username" type="text" required autofocus placeholder="usuario" />
 
-    <section class="form-section">
-      <h2>Datos Del Cliente</h2>
-      <label for="cliente">Nombre y Apellido:</label>
-      <input type="text" id="cliente" placeholder="Ingrese su nombre completo" required>
+        <label for="pass">Contraseña</label>
+        <div class="pw-row">
+          <input id="pass" name="password" type="password" required placeholder="••••••••" />
+          <button type="button" id="togglePw" class="ghost small" aria-label="Mostrar u ocultar contraseña">👁️</button>
+        </div>
+
+        <div class="row">
+          <label class="chk">
+            <input id="remember" type="checkbox" />
+            <span>Recordarme</span>
+          </label>
+
+          <button id="submitBtn" class="primary" type="submit">Ingresar</button>
+        </div>
+
+        <p id="error" class="error" role="alert" hidden></p>
+      </form>
+
+      <p class="help">¿Problemas para entrar? Contactá al administrador para restablecer tu clave.</p>
     </section>
+  </main>
 
-    <section class="categorias">
-      <h2>Categorías</h2>
-      <div class="categoria-lista">
-        <button class="categoria-btn" onclick="mostrarProductos('liquidos')">💧 Líquidos</button>
-        <button class="categoria-btn" onclick="mostrarProductos('papel')">📄 Papel</button>
-        <button class="categoria-btn" onclick="mostrarProductos('bolsas')">🛍️ Bolsas</button>
-        <button class="categoria-btn" onclick="mostrarProductos('inflamables')">🔥 Inflamables</button>
-        <button class="categoria-btn" onclick="mostrarProductos('varios')">📦 Varios</button>
-      </div>
-    </section>
+  <script>
+    const STORAGE_KEY = 'loginapp_credentials';
 
-    <section class="catalogo">
-      <h2>Catálogo de Productos</h2>
-      <div id="productos"></div>
-    </section>
+    // Cargar recordatorio si existe
+    (function preloadRemembered(){
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (saved.username) {
+          document.getElementById('user').value = saved.username || '';
+          if (saved.password) {
+            document.getElementById('pass').value = saved.password || '';
+            document.getElementById('remember').checked = true;
+          }
+        }
+      } catch {}
+    })();
 
-    <section class="carrito">
-      <h2>Carrito</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Artículo</th>
-            <th>Cantidad</th>
-            <th>Precio</th>
-            <th>Subtotal</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="carrito-body"></tbody>
-      </table>
-      <div class="total">Total: $<span id="total">0.00</span></div>
-      <button id="finalizar">Finalizar Pedido</button>
-    </section>
+    // Mostrar/ocultar password
+    document.getElementById('togglePw').addEventListener('click', () => {
+      const input = document.getElementById('pass');
+      input.type = (input.type === 'password') ? 'text' : 'password';
+    });
 
-    <section class="remito" id="remito-section" style="display:none;">
-      <h2>Remito</h2>
-      <div id="remito"></div>
-      <button id="enviar">Enviar por Email</button>
-    </section>
-  </div>
+    // Enviar login
+    const form = document.getElementById('loginForm');
+    const btn  = document.getElementById('submitBtn');
+    const err  = document.getElementById('error');
 
-  <script src="/script.js"></script>
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      btn.disabled = true;
+      btn.textContent = 'Ingresando…';
+
+      const username = document.getElementById('user').value.trim();
+      const password = document.getElementById('pass').value;
+
+      if (!username || !password) {
+        showError('Completá usuario y contraseña.'); resetBtn(); return;
+      }
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          showError(data.error || 'Usuario o contraseña inválidos.');
+          resetBtn(); return;
+        }
+
+        // Recordar credenciales (opcional y local)
+        if (document.getElementById('remember').checked) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+
+        // Redirigir al panel (ajústalo si querés otra página)
+        window.location.href = '/dashboard.html';
+      } catch (e2) {
+        showError('No se pudo conectar con el servidor.');
+        resetBtn();
+      }
+    });
+
+    function showError(msg) {
+      err.textContent = msg;
+      err.hidden = false;
+    }
+    function resetBtn() {
+      btn.disabled = false;
+      btn.textContent = 'Ingresar';
+    }
+  </script>
 </body>
 </html>
