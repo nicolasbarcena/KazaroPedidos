@@ -396,5 +396,5 @@ async function enviarEmail() {
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("finalizar")?.addEventListener("click", finalizarPedido);
   document.getElementById("enviar")?.addEventListener("click", enviarEmail);
-  cargarProductos(); // <-- Lee hoja y JSON, y luego filtra según la política
+  cargarProductos(); 
 });

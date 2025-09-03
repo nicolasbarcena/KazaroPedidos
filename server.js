@@ -12,7 +12,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 /* ============ DB: PG o SQLite (fallback) ============ */
-let DB_MODE = 'sqlite'; // por defecto local
+let DB_MODE = 'sqlite'; 
 let pgPool = null;
 let sqliteDb = null;
 
@@ -44,7 +44,7 @@ if (usePostgres) {
 
 // Helpers de consulta
 function pgQuery(sql, params = []) {
-  return pgPool.query(sql, params); // { rows, rowCount }
+  return pgPool.query(sql, params); 
 }
 function sqliteQuery(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -63,7 +63,7 @@ function sqliteQuery(sql, params = []) {
   });
 }
 function dbQuery(sqlPg, sqlSqlite, params = []) {
-  // Usa el SQL correspondiente según el motor
+  
   if (DB_MODE === 'pg') return pgQuery(sqlPg, params);
   return sqliteQuery(sqlSqlite, params);
 }
@@ -107,7 +107,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
   keys: [process.env.SESSION_SECRET || 'dev-secret'],
-  maxAge: 1000 * 60 * 60 * 8, // 8h
+  maxAge: 1000 * 60 * 60 * 8, 
   sameSite: 'lax',
   secure: IS_PROD,
 }));
@@ -155,7 +155,7 @@ function requireAuth(req, res, next) {
 }
 
 /* ============ API ============ */
-// Registro
+
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -232,7 +232,6 @@ app.post('/api/choose-role', requireAuth, (req, res) => {
   res.json({ ok: true, role });
 });
 
-// Logout
 app.post('/api/logout', (req, res) => {
   req.session = null;
   res.json({ ok: true });
@@ -254,7 +253,6 @@ app.get('/__debug', async (_req, res) => {
   });
 });
 
-// 404 para /api desconocidas
 app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'NOT_FOUND' }));
 
 // Handler de errores
