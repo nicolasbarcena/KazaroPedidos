@@ -1,19 +1,13 @@
-/* ===========================
-   Accesible + 100% responsive
-   =========================== */
 :root{
-  /* Colores */
   --bg:#0f172a;
   --bg-grad-1:#1f2937;
   --card:#111827;
   --muted:#9ca3af;
   --text:#e5e7eb;
-  --primary:#4f46e5;   /* Indigo */
+  --primary:#4f46e5;   
   --primary-2:#6366f1;
   --error:#f87171;
-  --ring: rgba(99,102,241,.45); /* un poco más visible para AA */
-
-  /* Espaciados y radios */
+  --ring: rgba(99,102,241,.45); 
   --radius: 14px;
   --pad: clamp(16px, 3.5vw, 28px);
   --gap: 12px;
@@ -21,7 +15,6 @@
 
 *{ box-sizing: border-box; }
 
-/* Mejora legibilidad en móviles y respeta tema oscuro en controles nativos */
 html,body{ height:100%; }
 html{ -webkit-text-size-adjust:100%; }
 body{
@@ -33,7 +26,7 @@ body{
     radial-gradient(80rem 60rem at 20% -10%, var(--bg-grad-1) 0, var(--bg) 45%) no-repeat,
     var(--bg);
   color: var(--text);
-  min-height: 100dvh; /* corrige barras del navegador en móvil */
+  min-height: 100dvh; 
   padding:
     calc(env(safe-area-inset-top) + 0px)
     calc(env(safe-area-inset-right) + 0px)
@@ -58,7 +51,7 @@ body{
   backdrop-filter: blur(10px);
 }
 
-/* Tipografías fluidas */
+
 h1{
   margin: 0 0 6px 0;
   font-size: clamp(1.4rem, 3.8vw, 1.9rem);
@@ -70,7 +63,7 @@ h1{
   font-size: clamp(.92rem, 2.8vw, 1rem);
 }
 
-/* Formulario */
+
 label{
   display:block;
   font-size: .95rem;
@@ -84,10 +77,10 @@ input{
   color: var(--text);
   border:1px solid rgba(255,255,255,.14);
   border-radius: var(--radius);
-  padding: 14px 14px;               /* ≥44px táctil sumando line-height */
+  padding: 14px 14px;               
   font-size: 1rem;
   line-height: 1.2;
-  min-height: 44px;                 /* tamaño táctil accesible */
+  min-height: 44px;                 
   outline: none;
   transition: box-shadow .15s, border-color .15s, background .15s;
 }
@@ -98,14 +91,14 @@ input:focus-visible{
   background: #0c1426;
 }
 
-/* Fila password + botón ver */
+
 .pw-row{
   display:flex;
   gap: 8px;
   align-items:center;
 }
 
-/* Filas de acciones */
+
 .row{
   display:flex;
   align-items:center;
@@ -114,13 +107,13 @@ input:focus-visible{
   margin-top: 12px;
 }
 
-/* En móviles apilar botones y que ocupen ancho completo */
+
 @media (max-width: 520px){
   .row{ flex-direction: column; align-items: stretch; }
   .row > *{ width: 100%; }
 }
 
-/* Checkbox accesible */
+
 .chk{
   display:flex;
   align-items:center;
@@ -136,7 +129,7 @@ input:focus-visible{
   border-radius: 6px;
 }
 
-/* Botones */
+
 .primary, .ghost{
   border-radius: var(--radius);
   padding: 14px 16px;
@@ -145,7 +138,7 @@ input:focus-visible{
   font-size: 1rem;
   border: 1px solid transparent;
   transition: transform .06s ease, background .18s ease, border-color .18s ease, opacity .18s ease;
-  min-height: 44px;                 /* target táctil */
+  min-height: 44px;                 
 }
 .primary{
   background: linear-gradient(180deg, var(--primary), var(--primary-2));
@@ -163,14 +156,14 @@ input:focus-visible{
 
 .small{ padding: 12px 14px; min-height:44px; }
 
-/* Estados de foco visibles también en botones */
+
 .primary:focus-visible,
 .ghost:focus-visible{
   outline: none;
   box-shadow: 0 0 0 4px var(--ring);
 }
 
-/* Mensajes */
+
 .error{
   margin: 12px 0 0;
   background: rgba(248,113,113,.10);
@@ -181,7 +174,7 @@ input:focus-visible{
   font-size: .95rem;
 }
 
-/* Nota/ayuda */
+
 .help{
   margin: 14px 0 0;
   color: var(--muted);
@@ -189,26 +182,26 @@ input:focus-visible{
   text-align: center;
 }
 
-/* Muy pequeñas pantallas */
+
 @media (max-width: 380px){
   .card{ padding: 16px; border-radius: 12px; }
   input{ padding: 13px; }
   .small{ padding: 12px; }
 }
 
-/* Alto contraste del usuario */
+
 @media (prefers-contrast: more){
   :root{ --ring: rgba(99,102,241,.75); }
   .card{ border-color: rgba(255,255,255,.25); }
   input{ border-color: rgba(255,255,255,.35); }
 }
 
-/* Reduce animaciones si el usuario lo pide */
+
 @media (prefers-reduced-motion: reduce){
   *{ transition: none !important; }
 }
 
-/* Windows High Contrast (forced-colors) */
+
 @media (forced-colors: active){
   .card, input, .primary, .ghost, .error{ forced-color-adjust: none; }
   .card{ border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
@@ -220,7 +213,7 @@ input:focus-visible{
   input:focus-visible{ outline: 2px solid Highlight; box-shadow: none; }
 }
 
-/* Utilidad opcional para lectores de pantalla */
+
 .visually-hidden{
   position:absolute!important;
   height:1px; width:1px;
